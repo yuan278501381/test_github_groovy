@@ -18,7 +18,7 @@ class IssuedWarehouseInApplication extends AopAfterGroovyClass{
 
 //        for (BmfObject warehouseInApplication :warehouseInApplicationList){
 //            if(收货场景){
-//                sceneGroovyService.businessCodeStart("issuedWarehouseInApplication",warehouseInApplication)
+//                sceneGroovyService.restfulCodeStart("issuedWarehouseInApplication",warehouseInApplication)
 //            }else (不收货场景){
 //
 //            }
