@@ -1,0 +1,133 @@
+server:
+  port: 20301
+  servlet:
+    context-path: /dwork-dev
+spring:
+  mvc:
+    static-path-pattern: /static/**
+    servlet:
+      load-on-startup: 1
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+  redis:
+    host: 119.145.133.2
+    port: 22479
+    password: MfiXW9W@T7#9eb=GH.M%
+    database: 1
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://119.145.133.2:22506/dwork_cs?useSSL=false&useUnicode=true&characterEncoding=utf8&useOldAliasMetadataBehavior=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&autoReconnect=true
+    username: dwork
+    password: H]7SP866%^wJHYa4
+    druid:
+      db-type: mysql
+      initial-size: 5     # 连接池初始值
+      min-idle: 5         # 最小空闲数
+      max-active: 10      # 最大连接数
+      max-wait: 60000     # 获取连接时最大等待时间 毫秒
+      min-evictable-idle-time-millis: 300000    # 最小空闲时间 毫秒
+      max-evictable-idle-time-millis: 1800000   # 最大空闲时间 毫秒
+      time-between-eviction-runs-millis: 60000  # 回收空闲连接的检查时间间隔 毫秒
+      validation-query: select 1 from dual      # 连接检查SQL
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      filter:
+        stat:
+          enabled: true
+          slow-sql-millis: 5000
+          log-slow-sql: true
+          merge-sql: true
+        wall:
+          enabled: false
+          config:
+            update-allow: true
+            insert-allow: true
+            delete-allow: true
+            drop-table-allow: true
+        slf4j:
+          enabled: false
+      web-stat-filter:
+        enabled: true
+        url-pattern: /*
+        exclusions: /druid/*,*.js,*.gif,*.jpg,*.png,*.css,*.ico
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        reset-enable: false
+        login-username: root
+        login-password: 123456a
+      use-global-data-source-stat: true
+  groovy:
+    template:
+      check-template-location: false
+  freemarker:
+    check-template-location: false
+mybatis-plus:
+  configuration:
+    call-setters-on-nulls: true
+  global-config:
+    banner: off
+    db-config:
+      logic-delete-field: flag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+logging:
+  config: classpath:logback-dev.xml
+project:
+  database-name: dwork_cs
+  auth-coexistence: true
+  fast-bi:
+    host: http://119.145.133.2:9191
+    username: dwork
+    password: FYvjLcL89PTxP78P
+  mqtt:
+    enable: true
+    host: tcp://119.145.133.2:22483?wireFormat.maxInactivityDuration=0
+    #外网地址
+    external: 119.145.133.2:22480
+    #MQTT-连接服务器默认客户端ID
+    client-id: dworkDev
+    #MQTT-用户名
+    username: admin
+    #MQTT-密码
+    password: q48YEyZG9y8TB)UT>#Jh
+    #MQTT-默认的消息推送主题，实际可在调用接口时指定
+    topic: default
+    #连接超时
+    timeout: 1000
+    #后端秘钥
+    authorization: Basic YWRtaW46YWRtaW4=
+minio:
+  url: http://119.145.133.2:9000
+  path: /mnt/attachment
+  accessKey: minioadmin
+  secretKey: qkUi5nZpdlv0HOm5
+  totalSpace: 512000
+  lastTime: 90
+  init:
+    - backups
+    - regression
+    - standard
+chinajey:
+  license:
+    validator:
+      enabled: true
+      file: ${licensePath:/opt/dwork_licence}
+      public-key: MIGdMA0GCSqGSIb3DQEBAQUAA4GLADCBhwKBgQC7xAQszTFeFV/NVK98p/AWsa0PaSE+TRfWLIJvA5XFdKqayVmxwhg4IVYSnL8OLriTT8ryeE6vpRH0L8FWaG4csHBt3Q9ondj1y4wWTqhb7+lkoIxKl1tlvxe2/5omHGMXzgjZH1XC0wDrYfsbTaBugoLg36b90nV/2piYhlapDQIBAw==
+dwork:
+  init-xml: true
+  groovy-script-cache: false
+  groovy-script-debug: true
+virgo:
+  enable-sql-log: false
+  enable-redis-cache: false
+external-api:
+  name: test
+  pass: test
+  signature: test
+aspose:
+  target-path: /dwork-pdf
