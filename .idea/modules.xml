@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/c000911.iml" filepath="$PROJECT_DIR$/.idea/c000911.iml" />
       <module fileurl="file://$PROJECT_DIR$/dwork-config-server/dwork-config-server.iml" filepath="$PROJECT_DIR$/dwork-config-server/dwork-config-server.iml" />
+      <module fileurl="file://$PROJECT_DIR$/dwork-zdld.iml" filepath="$PROJECT_DIR$/dwork-zdld.iml" />
     </modules>
   </component>
 </project>

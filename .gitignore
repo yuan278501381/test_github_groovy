@@ -1,0 +1,7 @@
+/dwork-config-server/src/main/resources/application-local.yml
+**/target/
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr

@@ -129,5 +129,17 @@ external-api:
   name: test
   pass: test
   signature: test
+ics:
+  api-key: ics
+  secret-key: a070873926b669b9ac39707da958e9d8
+  base-url: http://119.145.133.2:22480/ics-api-cs
+  electronic-tag: /electronic-tag
+  transport-type: /open-api/transport-type
+  brand-field: /open-api/all-fields
+  assign-task: /open-api/assign
+  agv-info-list: /open-api/agv-info-list
+  return-task: /open-api/return
+  cancel-task: /open-api/cancel
+
 aspose:
   target-path: /dwork-pdf
