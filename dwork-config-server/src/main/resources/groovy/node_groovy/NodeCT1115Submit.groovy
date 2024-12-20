@@ -81,8 +81,6 @@ class NodeCT1115Submit extends NodeGroovyClass {
         if (locations == null || locations.size() == 0) {
             throw new BusinessException("工作台没有配置库位")
         }
-        //滚筒线下架任务明细
-        def downTask = nodeData.getList("tasks").get(0)
         //出库口
         def inLocationCode = null
         def inLocationName = null
@@ -136,7 +134,7 @@ class NodeCT1115Submit extends NodeGroovyClass {
         //------------------------任务周转箱 START-----------------------
         passBox.put("id", null)
         passBox.put("submit", false)
-        BmfObject bmfObject = BmfUtils.genericFromJsonExt(passBox, "CT1121PassBoxes")
+        BmfObject bmfObject = BmfUtils.genericFromJsonExt(passBox, "CT1111PassBoxes")
         object.put("passBoxes", Arrays.asList(bmfObject))
         //------------------------任务周转箱 END-----------------------
         sceneGroovyService.buzSceneStart("CT1111", object)
