@@ -9,7 +9,7 @@ import com.tengnat.dwork.modules.script.service.BasicGroovyService
 import org.apache.commons.lang3.StringUtils
 
 /**
- * 滚筒线搬运入库提交脚本
+ * 滚筒线搬运提交脚本
  */
 class NodeCT1112Submit extends NodeGroovyClass {
     def basicGroovyService = SpringUtils.getBean(BasicGroovyService.class)
@@ -24,6 +24,7 @@ class NodeCT1112Submit extends NodeGroovyClass {
 
         //ctu的开始位置=滚筒线的结束位置
         nodeData.put("sourceLocationCode", nodeData.getString("ext_end_point"))
+        nodeData.put("ext_end_point", nodeData.getString("targetLocationCode"))
 
         // throw new BusinessException("测试回滚......")
         return nodeData
