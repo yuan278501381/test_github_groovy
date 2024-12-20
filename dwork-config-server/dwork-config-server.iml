@@ -20,14 +20,14 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="Maven: com.chinajey:dwork-config-standard:2.5.9.3-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.chinajey:dwork-config-standard:2.5.9.3-Workbench-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: com.galaxy:workflow-core:1.3.3-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.hibernate.validator:hibernate-validator:6.1.6.Final" level="project" />
     <orderEntry type="library" name="Maven: jakarta.validation:jakarta.validation-api:2.0.2" level="project" />
     <orderEntry type="library" name="Maven: org.jboss.logging:jboss-logging:3.4.1.Final" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml:classmate:1.5.1" level="project" />
     <orderEntry type="library" name="Maven: com.galaxy:workflow-core-impl:1.3.3-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.tongjie:app-virgo:2.5.9.3-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.tongjie:app-virgo:2.5.9.3-Workbench-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: commons-io:commons-io:2.4" level="project" />
     <orderEntry type="library" name="Maven: org.apache.poi:poi-ooxml-schemas:4.1.2" level="project" />
     <orderEntry type="library" name="Maven: org.apache.xmlbeans:xmlbeans:3.1.0" level="project" />
@@ -51,16 +51,16 @@
     <orderEntry type="library" name="Maven: org.springframework.retry:spring-retry:1.2.5.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: io.projectreactor:reactor-core:3.3.11.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.reactivestreams:reactive-streams:1.0.3" level="project" />
-    <orderEntry type="library" name="Maven: com.chinajey.license:app-server-info:2.5.9.3-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.chinajey.license:app-license:2.5.9.3-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.chinajey.license:app-server-info:2.5.9.3-Workbench-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.chinajey.license:app-license:2.5.9.3-Workbench-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.bouncycastle:bcprov-jdk15on:1.70" level="project" />
-    <orderEntry type="library" name="Maven: com.chinajey.script:app-script:2.5.9.3-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.chinajey.app-common:app-common:2.5.9.3-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.chinajey.script:app-script:2.5.9.3-Workbench-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.chinajey.app-common:app-common:2.5.9.3-Workbench-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: joda-time:joda-time:2.10.2" level="project" />
-    <orderEntry type="library" name="Maven: com.chinajey:business-core:2.5.9.3-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.chinajey:business-core:2.5.9.3-Workbench-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.apache.pdfbox:pdfbox:2.0.27" level="project" />
     <orderEntry type="library" name="Maven: org.apache.pdfbox:fontbox:2.0.27" level="project" />
-    <orderEntry type="library" name="Maven: com.chinajey.preview.fields:app-preview-fields:2.5.9.3-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.chinajey.preview.fields:app-preview-fields:2.5.9.3-Workbench-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: com.aspose:aspose-words:20.4" level="project" />
     <orderEntry type="library" name="Maven: com.aspose:aspose-cells:23.3" level="project" />
     <orderEntry type="library" name="Maven: com.aspose:aspose-slides:20.4" level="project" />
