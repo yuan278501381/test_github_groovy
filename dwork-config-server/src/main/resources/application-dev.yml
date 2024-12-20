@@ -119,7 +119,7 @@ chinajey:
       file: ${licensePath:/opt/dwork_licence}
       public-key: MIGdMA0GCSqGSIb3DQEBAQUAA4GLADCBhwKBgQC7xAQszTFeFV/NVK98p/AWsa0PaSE+TRfWLIJvA5XFdKqayVmxwhg4IVYSnL8OLriTT8ryeE6vpRH0L8FWaG4csHBt3Q9ondj1y4wWTqhb7+lkoIxKl1tlvxe2/5omHGMXzgjZH1XC0wDrYfsbTaBugoLg36b90nV/2piYhlapDQIBAw==
 dwork:
-  init-xml: true
+  init-xml: false
   groovy-script-cache: false
   groovy-script-debug: true
 virgo:
