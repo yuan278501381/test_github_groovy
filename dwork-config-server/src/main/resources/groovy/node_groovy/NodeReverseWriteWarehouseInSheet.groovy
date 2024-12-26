@@ -11,6 +11,7 @@ import com.chinajey.application.common.utils.ValueUtil
 import com.tengnat.dwork.common.utils.CodeGenerator
 import com.tengnat.dwork.modules.script.abstracts.NodeGroovyClass
 import com.tengnat.dwork.modules.script.service.BasicGroovyService
+import org.springframework.util.ObjectUtils
 
 import java.util.stream.Collectors
 
@@ -161,20 +162,36 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
             warehouseInResult.put("warehouseInType", nodeData.getString("ext_warehouse_in_type"))
             codeGenerator.setCode(warehouseInResult)
             basicGroovyService.saveOrUpdate(warehouseInResult)
-        } else {
-            //直接更新
         }
-        def detail = new BmfObject("warehouseInResultDetail")
-        detail.put("mainid", warehouseInResult)
-        detail.put("materialName", warehouseInSheetDetail.getString("materialName"))
-        detail.put("materialCode", warehouseInSheetDetail.getString("materialCode"))
-        detail.put("specifications", warehouseInSheetDetail.getString("specifications"))
-        detail.put("unit", warehouseInSheetDetail.get("unit"))
-        detail.put("quantity", quantity)
-        detail.put("warehouseName", warehouseInSheetDetail.getString("target_warehouse_name"))
-        detail.put("warehouseCode", warehouseInSheetDetail.getString("target_warehouse_code"))
-        detail.put("sourceOrderLine", warehouseInSheetDetail.getInteger("lineNum"))
-        basicGroovyService.saveOrUpdate(detail)
+        List<BmfObject> warehouseInResultDetails = warehouseInResult.getAndRefreshList("mainidAutoMapping");
+        BmfObject detail = warehouseInResultDetails.stream().filter {
+            warehouseInSheetDetail.getInteger("lineNum") == it.getInteger("sourceOrderLine")
+        }.findFirst().orElse(null)
+        if (ObjectUtils.isEmpty(warehouseInResultDetails)) {
+            detail = new BmfObject("warehouseInResultDetail")
+            detail.put("mainid", warehouseInResult)
+            detail.put("materialName", warehouseInSheetDetail.getString("materialName"))
+            detail.put("materialCode", warehouseInSheetDetail.getString("materialCode"))
+            detail.put("specifications", warehouseInSheetDetail.getString("specifications"))
+            detail.put("unit", warehouseInSheetDetail.get("unit"))
+            detail.put("quantity", quantity)
+            detail.put("warehouseName", warehouseInSheetDetail.getString("target_warehouse_name"))
+            detail.put("warehouseCode", warehouseInSheetDetail.getString("target_warehouse_code"))
+            detail.put("sourceOrderLine", warehouseInSheetDetail.getInteger("lineNum"))
+            basicGroovyService.saveOrUpdate(detail)
+        }else {
+            detail.put("quantity", detail.getBigDecimal("quantity").add(quantity))
+            basicGroovyService.updateByPrimaryKeySelective(detail)
+        }
+        BmfObject warehouseInResultPassBox = new BmfObject("warehouseInResultPassBox")
+        warehouseInResultPassBox.put("warehouseInResultDetailId", detail)
+        warehouseInResultPassBox.put("passBoxName", passBoxReal.getString("name"))
+        warehouseInResultPassBox.put("passBoxCode", passBoxReal.getString("code"))
+        warehouseInResultPassBox.put("quantity", quantity)
+        warehouseInResultPassBox.put("unit", warehouseInSheetDetail.get("unit"))
+        basicGroovyService.saveOrUpdate(warehouseInResultPassBox)
+
+
 
     }
 }
