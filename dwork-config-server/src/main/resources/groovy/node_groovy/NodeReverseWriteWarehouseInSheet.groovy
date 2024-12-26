@@ -8,6 +8,7 @@ import com.chinajay.virgo.bmf.sql.Where
 import com.chinajay.virgo.utils.SpringUtils
 import com.chinajey.application.common.exception.BusinessException
 import com.chinajey.application.common.utils.ValueUtil
+import com.chinajey.dwork.company.enums.WarehouseInTypeEnums
 import com.tengnat.dwork.common.utils.CodeGenerator
 import com.tengnat.dwork.modules.script.abstracts.NodeGroovyClass
 import com.tengnat.dwork.modules.script.service.BasicGroovyService
@@ -28,7 +29,7 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
         //获取周转箱信息
         List<BmfObject> passBoxes = nodeData.getList("passBoxes")
         def businessType = nodeData.getString("ext_business_type")
-        if (passBoxes == null || passBoxes.size() == 0 || !"采购入库".equals(businessType)) {
+        if (passBoxes == null || passBoxes.size() == 0 || !WarehouseInTypeEnums.getCodes().contains(businessType)) {
             return nodeData
         }
         for (final def passBox in passBoxes) {
@@ -179,7 +180,7 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
             detail.put("warehouseCode", warehouseInSheetDetail.getString("target_warehouse_code"))
             detail.put("sourceOrderLine", warehouseInSheetDetail.getInteger("lineNum"))
             basicGroovyService.saveOrUpdate(detail)
-        }else {
+        } else {
             detail.put("quantity", detail.getBigDecimal("quantity").add(quantity))
             basicGroovyService.updateByPrimaryKeySelective(detail)
         }
@@ -190,7 +191,6 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
         warehouseInResultPassBox.put("quantity", quantity)
         warehouseInResultPassBox.put("unit", warehouseInSheetDetail.get("unit"))
         basicGroovyService.saveOrUpdate(warehouseInResultPassBox)
-
 
 
     }
