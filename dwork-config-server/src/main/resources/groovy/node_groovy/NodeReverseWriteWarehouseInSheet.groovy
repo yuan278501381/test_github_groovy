@@ -8,7 +8,6 @@ import com.chinajay.virgo.bmf.sql.Where
 import com.chinajay.virgo.utils.SpringUtils
 import com.chinajey.application.common.exception.BusinessException
 import com.chinajey.application.common.utils.ValueUtil
-import com.chinajey.dwork.company.enums.WarehouseInTypeEnums
 import com.tengnat.dwork.common.utils.CodeGenerator
 import com.tengnat.dwork.modules.script.abstracts.NodeGroovyClass
 import com.tengnat.dwork.modules.script.service.BasicGroovyService
@@ -29,7 +28,7 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
         //获取周转箱信息
         List<BmfObject> passBoxes = nodeData.getList("passBoxes")
         def businessType = nodeData.getString("ext_business_type")
-        if (passBoxes == null || passBoxes.size() == 0 || !WarehouseInTypeEnums.getCodes().contains(businessType)) {
+        if (passBoxes == null || passBoxes.size() == 0) {
             return nodeData
         }
         for (final def passBox in passBoxes) {
@@ -44,7 +43,7 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
 //            List<BmfObject> warehouseInSheetDetails = warehouseInApplication.getAndRefreshList("main_idAutoMapping")
             //匹配入库任务单
             Map<String, Object> params = new HashMap<String, Object>()
-            params.put("passBoxRealCode", passBox.getString("code"))
+            params.put("passBoxCode", passBox.getString("passBoxCode"))
             List<BmfObject> warehouseInSheetPassBoxs = basicGroovyService.find("warehouseInSheetPassBox", params)
             if (warehouseInSheetPassBoxs == null || warehouseInSheetPassBoxs.size() == 0) {
                 throw new BusinessException("未找到入库任务单周转箱编码" + passBox.getString("passBoxCode"))
@@ -79,10 +78,10 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
             if (warehouseInApplication == null) {
                 throw new BusinessException("未找到入库申请单" + warehouseInSheetDetail.getString("warehouseInApplicationCode"))
             }
-            List<BmfObject> warehouseInSheetDetails = warehouseInApplication.getAndRefreshList("main_idAutoMapping")
+            List<BmfObject> warehouseInApplicationDetails = warehouseInApplication.getAndRefreshList("main_idAutoMapping")
             //匹配入库申请单子表
             //获取待修改数量
-            List<BmfObject> receiptdetails = warehouseInSheetDetails.stream()
+            List<BmfObject> receiptdetails = warehouseInApplicationDetails.stream()
                     .filter(purchaseReceiptDetail -> {
                         BigDecimal noWarehousedQuantity = ValueUtil.toBigDecimal(purchaseReceiptDetail.getBigDecimal("wait_inbound_quantity"), BigDecimal.ZERO)
                         return noWarehousedQuantity > 0
@@ -107,25 +106,25 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
                     detail.put("wait_inbound_quantity", receivedQuantity - warehousedQuantity)
                     lineNumUpdateMap.put(detail.getString("lineNum"), noWarehousedQuantity)
                     //创建更新入库结果单据
-                    maintenanceWarehouseInResult(passBox, noWarehousedQuantity, warehouseInSheetDetail.getString("warehouseInApplicationCode"), detail, nodeData)
+                    maintenanceWarehouseInResult(passBox, noWarehousedQuantity, warehouseInSheetDetail.getString("warehouseInApplicationCode"), detail, warehouseInSheetDetail, nodeData)
                 } else {
                     //本次数量 <= 待收货数量
                     //下一行数量 = 0
                     //待收货数量 = 待收货数量 - 本次数量
                     lineNumUpdateMap.put(detail.getString("lineNum"), sum)
                     warehousedQuantity = warehousedQuantity + sum
-                    sum = BigDecimal.ZERO
                     detail.put("warehoused_quantity", warehousedQuantity)
                     detail.put("wait_inbound_quantity", receivedQuantity - warehousedQuantity)
                     //创建更新入库结果单据
-                    maintenanceWarehouseInResult(passBox, sum, warehouseInSheetDetail.getString("warehouseInApplicationCode"), detail, nodeData)
+                    maintenanceWarehouseInResult(passBox, sum, warehouseInSheetDetail.getString("warehouseInApplicationCode"), detail, warehouseInSheetDetail, nodeData)
+                    sum = BigDecimal.ZERO
                 }
                 //更新采购收货通知单数据
                 basicGroovyService.updateByPrimaryKeySelective(detail)
             }
 
             BigDecimal sumWarehousedQty = BigDecimal.ZERO
-            for (BmfObject detail : warehouseInSheetDetails) {
+            for (BmfObject detail : warehouseInApplicationDetails) {
                 sumWarehousedQty = sumWarehousedQty + ValueUtil.toBigDecimal(detail.getBigDecimal("wait_inbound_quantity"), BigDecimal.ZERO)
             }
             if (!Arrays.asList("completed", "closed").contains(warehouseInApplication.getString("status"))) {
@@ -148,10 +147,10 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
      * @param passBoxReal
      * @param quantity
      * @param warehouseInApplicationCode
-     * @param warehouseInSheetDetail
+     * @param warehouseInApplicationDetail
      * @param nodeData
      */
-    private void maintenanceWarehouseInResult(BmfObject passBoxReal, BigDecimal quantity, String warehouseInApplicationCode, BmfObject warehouseInSheetDetail, BmfObject nodeData) {
+    private void maintenanceWarehouseInResult(BmfObject passBoxReal, BigDecimal quantity, String warehouseInApplicationCode, BmfObject warehouseInApplicationDetail, BmfObject warehouseInSheetDetail, BmfObject nodeData) {
         //查询是否已经存在入库申请单对应的入库结果单
         BmfObject warehouseInResult = basicGroovyService.findOne("warehouseInResult", "warehouseInApplicationCode", warehouseInApplicationCode)
         if (warehouseInResult == null) {
@@ -166,7 +165,7 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
         }
         List<BmfObject> warehouseInResultDetails = warehouseInResult.getAndRefreshList("mainidAutoMapping");
         BmfObject detail = warehouseInResultDetails.stream().filter {
-            warehouseInSheetDetail.getInteger("lineNum") == it.getInteger("sourceOrderLine")
+            warehouseInApplicationDetail.getInteger("lineNum") == it.getInteger("sourceOrderLine")
         }.findFirst().orElse(null)
         if (ObjectUtils.isEmpty(warehouseInResultDetails)) {
             detail = new BmfObject("warehouseInResultDetail")
@@ -176,9 +175,9 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
             detail.put("specifications", warehouseInSheetDetail.getString("specifications"))
             detail.put("unit", warehouseInSheetDetail.get("unit"))
             detail.put("quantity", quantity)
-            detail.put("warehouseName", warehouseInSheetDetail.getString("target_warehouse_name"))
-            detail.put("warehouseCode", warehouseInSheetDetail.getString("target_warehouse_code"))
-            detail.put("sourceOrderLine", warehouseInSheetDetail.getInteger("lineNum"))
+            detail.put("warehouseName", warehouseInSheetDetail.getString("warehouseName"))
+            detail.put("warehouseCode", warehouseInSheetDetail.getString("warehouseCode"))
+            detail.put("sourceOrderLine", warehouseInApplicationDetail.getInteger("lineNum"))
             basicGroovyService.saveOrUpdate(detail)
         } else {
             detail.put("quantity", detail.getBigDecimal("quantity").add(quantity))
