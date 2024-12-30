@@ -85,10 +85,11 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
                     .filter(purchaseReceiptDetail -> {
                         BigDecimal noWarehousedQuantity = ValueUtil.toBigDecimal(purchaseReceiptDetail.getBigDecimal("wait_inbound_quantity"), BigDecimal.ZERO)
                         return noWarehousedQuantity > 0
-                    }).sorted(Comparator.comparing(t -> ValueUtil.toLong(((BmfObject) t).getString("lineNum"))))
+                    }).sorted(Comparator.comparing(t -> ((BmfObject) t).getInteger("lineNum")))
+                    .sorted(Comparator.comparing(t -> ((BmfObject) t).getPrimaryKeyValue()))
                     .collect(Collectors.toList())
             //记录行号对应数量
-            Map<String, BigDecimal> lineNumUpdateMap = new HashMap<>()
+            Map<Long, BigDecimal> lineNumUpdateMap = new HashMap<>()
             //开始修改 采购收货通知单 数量
             for (BmfObject detail : receiptdetails) {
                 BigDecimal receivedQuantity = detail.getBigDecimal("quantity")
@@ -104,14 +105,14 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
                     warehousedQuantity = warehousedQuantity + noWarehousedQuantity
                     detail.put("warehoused_quantity", warehousedQuantity)
                     detail.put("wait_inbound_quantity", receivedQuantity - warehousedQuantity)
-                    lineNumUpdateMap.put(detail.getString("lineNum"), noWarehousedQuantity)
+                    lineNumUpdateMap.put(detail.getPrimaryKeyValue(), noWarehousedQuantity)
                     //创建更新入库结果单据
                     maintenanceWarehouseInResult(passBox, noWarehousedQuantity, warehouseInSheetDetail.getString("warehouseInApplicationCode"), detail, warehouseInSheetDetail, nodeData)
                 } else {
                     //本次数量 <= 待收货数量
                     //下一行数量 = 0
                     //待收货数量 = 待收货数量 - 本次数量
-                    lineNumUpdateMap.put(detail.getString("lineNum"), sum)
+                    lineNumUpdateMap.put(detail.getPrimaryKeyValue(), sum)
                     warehousedQuantity = warehousedQuantity + sum
                     detail.put("warehoused_quantity", warehousedQuantity)
                     detail.put("wait_inbound_quantity", receivedQuantity - warehousedQuantity)
@@ -165,7 +166,7 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
         }
         List<BmfObject> warehouseInResultDetails = warehouseInResult.getAndRefreshList("mainidAutoMapping");
         BmfObject detail = warehouseInResultDetails.stream().filter {
-            warehouseInApplicationDetail.getInteger("lineNum") == it.getInteger("sourceOrderLine")
+            warehouseInApplicationDetail.getPrimaryKeyValue() == it.getLong("warehouseInApplicationDetailId")
         }.findFirst().orElse(null)
         if (ObjectUtils.isEmpty(warehouseInResultDetails)) {
             detail = new BmfObject("warehouseInResultDetail")
@@ -178,6 +179,7 @@ class NodeReverseWriteWarehouseInSheet extends NodeGroovyClass {
             detail.put("warehouseName", warehouseInSheetDetail.getString("warehouseName"))
             detail.put("warehouseCode", warehouseInSheetDetail.getString("warehouseCode"))
             detail.put("sourceOrderLine", warehouseInApplicationDetail.getInteger("lineNum"))
+            detail.put("warehouseInApplicationDetailId", warehouseInApplicationDetail.getPrimaryKeyValue())
             basicGroovyService.saveOrUpdate(detail)
         } else {
             detail.put("quantity", detail.getBigDecimal("quantity").add(quantity))
