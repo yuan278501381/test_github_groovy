@@ -28,8 +28,8 @@ class NodeCTUReverseWriteWarehouseInSheet extends NodeGroovyClass {
     Object runScript(BmfObject nodeData) {
         //获取周转箱信息
         List<BmfObject> passBoxes = nodeData.getList("passBoxes")
-        def businessType = nodeData.getString("ext_business_type")
-        if (passBoxes == null || passBoxes.size() == 0 || !WarehouseInTypeEnums.getCodes().contains(businessType)) {
+        def type = nodeData.getString("ext_in_out_type")
+        if (passBoxes == null || passBoxes.size() == 0 || "in" != type) {
             return nodeData
         }
         for (final def passBox in passBoxes) {
