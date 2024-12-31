@@ -3,6 +3,7 @@ package groovy.node_groovy
 import com.chinajay.virgo.bmf.obj.BmfObject
 import com.chinajay.virgo.utils.BmfUtils
 import com.chinajay.virgo.utils.SpringUtils
+import com.chinajey.application.common.exception.BusinessException
 import com.tengnat.dwork.modules.script.abstracts.NodeGroovyClass
 import com.tengnat.dwork.modules.script.service.BasicGroovyService
 import com.tengnat.dwork.modules.script.service.SceneGroovyService
@@ -31,8 +32,11 @@ class NodeCT1110BusinessExecute extends  NodeGroovyClass {
             batchList.add(nodeData)
         }
         batchList.forEach(item -> {
+
+            //校验
+            ct1118Validate(nodeData,item)
             //创建入库待确认任务
-            createCt1118(nodeData, item)
+             createCt1118(nodeData,item)
 
         })
         return null
@@ -82,5 +86,21 @@ class NodeCT1110BusinessExecute extends  NodeGroovyClass {
 
 
 
+    }
+    private void ct1118Validate(BmfObject nodeData, BmfObject item) {
+
+        BigDecimal ext_quantity=item.getBigDecimal("ext_quantity")
+
+        List<BmfObject> passBoxes = nodeData.getList("passBoxes")
+        BigDecimal sum = passBoxes.stream().peek(passBox -> {
+            BmfObject passBoxReal = basicGroovyService.findOne("passBoxReal", "passBoxCode", passBox.getString("passBoxCode"))
+            if (passBoxReal == null) {
+                throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]实时信息不存在或生成失败")
+            }
+        }).map(passBox -> passBox.getBigDecimal("receiveQuantity") == null ? BigDecimal.ZERO : passBox.getBigDecimal("receiveQuantity"))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+        if (ext_quantity != sum) {
+            throw new BusinessException("周转箱总数量必须等于本次装箱数量")
+        }
     }
 }
