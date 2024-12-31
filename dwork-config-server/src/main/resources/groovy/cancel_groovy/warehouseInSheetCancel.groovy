@@ -127,7 +127,7 @@ class warehouseInSheetCancel extends AopAfterGroovyClass {
             }
 
 
-            //5、然后取消入库任务单
+            //5、最后取消入库任务单
             BmfObject warehouseInSheet2 = new BmfObject("warehouseInSheet")
             warehouseInSheet2.put("status", "cancel")
             warehouseInSheet2.put("id", warehouseInSheet.getInteger("id"))
