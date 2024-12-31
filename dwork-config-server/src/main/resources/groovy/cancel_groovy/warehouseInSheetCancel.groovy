@@ -55,19 +55,13 @@ class warehouseInSheetCancel extends AopAfterGroovyClass {
             if (!mapInfo.containsKey(thisStatus)) {
                 throw new BusinessException("单据存在关联交易，禁止取消")
             }
-            //2、然后取消入库任务单
-            BmfObject warehouseInSheet2 = new BmfObject("warehouseInSheet")
-            warehouseInSheet2.put("status", "cancel")
-            warehouseInSheet2.put("id", warehouseInSheet.getInteger("id"))
-            //提交取消入库任务单
-            basicGroovyService.updateByPrimaryKeySelective(warehouseInSheet2)
 
             // logisticsStatus
             //            1	已创建
             //            2	检验中
             //            3	已完成
             //            4	已取消
-
+           //2、重新打开入库待确认任务
             def docLists=warehouseInSheet.getAndRefreshList("mainidAutoMapping")
             BmfObject CT1118 = new BmfObject("CT1118")
             docLists.forEach { List ->
@@ -127,10 +121,18 @@ class warehouseInSheetCancel extends AopAfterGroovyClass {
             List<Map<String, Object>> listCT1112s = basicGroovyService.findList(getCT1112SQL)
             for (final def listCT1112 in listCT1112s) {
                 BmfObject objCT1112 = new BmfObject("CT1112")
-                objCT1112.put("id", listCT1112.get("id"))
+                objCT1112.put("id", listCT1112.get("ct1112_id"))
                 objCT1112.put("logisticsStatus", 4)
                 basicGroovyService.updateByPrimaryKeySelective(objCT1112)
             }
+
+
+            //5、最后取消入库任务单
+            BmfObject warehouseInSheet2 = new BmfObject("warehouseInSheet")
+            warehouseInSheet2.put("status", "cancel")
+            warehouseInSheet2.put("id", warehouseInSheet.getInteger("id"))
+            //提交取消入库任务单
+            basicGroovyService.updateByPrimaryKeySelective(warehouseInSheet2)
         }
     }
 
