@@ -123,7 +123,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             warehouseInSheetpassBox.put("passBoxName", passBox.getString("passBoxName"))
             warehouseInSheetpassBox.put("quantity", passBox.getBigDecimal("quantity"))
             //BmfObject单位取值报错，java.lang.ClassCastException: java.lang.String cannot be cast to com.chinajay.virgo.bmf.obj.BmfObject
-            //warehouseInSheetpassBox.put("unit", passBox.getAndRefreshBmfObject("quantityUnit"))
+            warehouseInSheetpassBox.put("unit",  basicGroovyService.getByCode ("material",passBox.getString("materialCode")).getAndRefreshBmfObject("flowUnit"))
             warehouseInSheetpassBox.put("passBoxRealCode", passBox.getString("passBoxRealCode"))
 
             warehouseInSheetpassBoxes.add(warehouseInSheetpassBox)
@@ -192,9 +192,8 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             objTask.put("materialCode", passBox.getString("materialCode"))
             //为task表的物料描述赋值
             objTask.put("materialName", passBox.getString("materialName"))
-            //TODO
-            // 为task表的物料数量单位
-            // objTask.put("quantityUnit", passBox.getAndRefreshBmfObject("quantityUnit"))
+
+            objTask.put("quantityUnit",  basicGroovyService.getByCode ("material",passBox.getString("materialCode")).getAndRefreshBmfObject("flowUnit"))//计量单位
             tasks.add(objTask)
             objCT1112.put("tasks", tasks)
 
