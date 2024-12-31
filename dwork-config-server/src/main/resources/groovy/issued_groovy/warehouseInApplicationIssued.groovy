@@ -102,13 +102,12 @@ class warehouseInApplicationIssued extends AopAfterGroovyClass {
                     objTask.put("materialCode", detailList.get(0).getString("materialCode"))
                     //为task表的物料描述赋值
                     objTask.put("materialName", detailList.get(0).getString("materialName"))
-                    //TODO
-                    // 为task表的物料数量单位
-                    // objTask.put("quantityUnit", passBox.getAndRefreshBmfObject("quantityUnit"))
+
+                    objTask.put("quantityUnit", basicGroovyService.getByCode ("material",detailList.get(0).getString("materialCode")).getAndRefreshBmfObject("flowUnit"))
                     tasks.add(objTask)
                     objCT1118.put("tasks", tasks)
 
-                    sceneGroovyService.buzSceneStart("CT1118", objCT1118);
+                    sceneGroovyService.buzSceneStart("CT1118", objCT1118)
 
                 }
 
