@@ -55,7 +55,7 @@ class warehouseInApplicationIssued extends AopAfterGroovyClass {
                     //相同物料只取第一行明细,即get(0)
                     BmfObject detail = detailList.get(0)
                     detail.put("quantity", totalQuantity)
-
+                    detail.getAndRefreshBmfObject("unit")
                     //是否翻包
                     String getmaterialExtSQL = "select t1.ext_packet_change from dwk_material t\n" +
                             "INNER JOIN dwk_material_ext t1 on t.id=t1.ext_material_id\n" +
