@@ -67,18 +67,18 @@ class NodeGN0001Submit extends NodeGroovyClass {
             BmfObject objTask = new BmfObject("CT1118Tasks")
             objTask.put("materialCode", passBox.getString("materialCode"))//物料编码
             objTask.put("materialName", passBox.getString("materialName"))//物料描述
-            //TODO
-            // objTask.put("quantityUnit", passBox.getAndRefreshBmfObject("quantityUnit"))//计量单位
+
+            objTask.put("quantityUnit",  basicGroovyService.getByCode ("material",passBox.getString("materialCode")).getAndRefreshBmfObject("flowUnit"))//计量单位
             tasks.add(objTask)//添加任务表
-            ct1118.put("tasks", tasks);  //添加任务表
+            ct1118.put("tasks", tasks)  //添加任务表
 
             //组装移动应用的周转箱表
-            BmfObject passBoxc =  BmfUtils.genericFromJsonExt(passBox, "CT1118PassBoxes");
-            passBoxc.put("id", null);
-            passBoxc.put("submit", false);
-            ct1118.put("passBoxes", Collections.singletonList(passBoxc));//添加周转箱表
+            BmfObject passBoxc =  BmfUtils.genericFromJsonExt(passBox, "CT1118PassBoxes")
+            passBoxc.put("id", null)
+            passBoxc.put("submit", false)
+            ct1118.put("passBoxes", Collections.singletonList(passBoxc))//添加周转箱表
 
-            sceneGroovyService.buzSceneStart("CT1118",ct1118);
+            sceneGroovyService.buzSceneStart("CT1118",ct1118)
 
             //回入库申请单的状态为:Received-已收货
             BmfObject warehouseInApplication=new BmfObject("WarehouseInApplication")
@@ -118,19 +118,18 @@ class NodeGN0001Submit extends NodeGroovyClass {
             BmfObject objTask = new BmfObject("CT1110Tasks")
             objTask.put("materialCode", passBox.getString("materialCode"))//物料编码
             objTask.put("materialName", passBox.getString("materialName"))//物料描述
-            //TODO
-            // objTask.put("quantityUnit",flowUnitname)//计量单位
+            objTask.put("quantityUnit",  basicGroovyService.getByCode ("material",passBox.getString("materialCode")).getAndRefreshBmfObject("flowUnit"))//计量单位
             tasks.add(objTask)//添加任务表
-            ct1110.put("tasks", tasks);  //添加任务表
+            ct1110.put("tasks", tasks)  //添加任务表
 
             //组装移动应用的周转箱表,
             //翻包界面的周转箱,用户按实际箱号扫描,所以不代入,考虑原来的周转箱要清空
             //从当前界面passbox数据复制到指定BmfClass 中,然后将id和submit置空
-            BmfObject passBoxb =  BmfUtils.genericFromJsonExt(passBox, "CT1110PassBoxes");
-            passBoxb.put("id", null);
-            passBoxb.put("submit", false);
-            ct1110.put("passBoxes", Collections.singletonList(passBoxb));//添加周转箱表
-            sceneGroovyService.buzSceneStart("CT1110",ct1110);
+            BmfObject passBoxb =  BmfUtils.genericFromJsonExt(passBox, "CT1110PassBoxes")
+            passBoxb.put("id", null)
+            passBoxb.put("submit", false)
+            ct1110.put("passBoxes", Collections.singletonList(passBoxb))//添加周转箱表
+            sceneGroovyService.buzSceneStart("CT1110",ct1110)
 
 
             //回写入库申请单的状态为:Received-已收货

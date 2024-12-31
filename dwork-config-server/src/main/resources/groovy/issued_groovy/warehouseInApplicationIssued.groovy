@@ -66,9 +66,7 @@ class warehouseInApplicationIssued extends AopAfterGroovyClass {
                     //将
                     warehouseInApplication.put("main_idAutoMapping", Collections.singletonList(detail))
                     sceneGroovyService.restfulCodeStart(restfulCode, warehouseInApplication)
-
                 }
-
             }
             //如果不为采购收货则创建入库待确认任务-PDA
             else {
@@ -106,12 +104,8 @@ class warehouseInApplicationIssued extends AopAfterGroovyClass {
                     objTask.put("quantityUnit", basicGroovyService.getByCode ("material",detailList.get(0).getString("materialCode")).getAndRefreshBmfObject("flowUnit"))
                     tasks.add(objTask)
                     objCT1118.put("tasks", tasks)
-
                     sceneGroovyService.buzSceneStart("CT1118", objCT1118)
-
                 }
-
-
             }
 
             //回入库申请单的状态为:Received-已收货
