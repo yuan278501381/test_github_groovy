@@ -125,10 +125,10 @@ class NodeGN0001Submit extends NodeGroovyClass {
             //组装移动应用的周转箱表,
             //翻包界面的周转箱,用户按实际箱号扫描,所以不代入,考虑原来的周转箱要清空
             //从当前界面passbox数据复制到指定BmfClass 中,然后将id和submit置空
-            BmfObject passBoxb =  BmfUtils.genericFromJsonExt(passBox, "CT1110PassBoxes")
-            passBoxb.put("id", null)
-            passBoxb.put("submit", false)
-            ct1110.put("passBoxes", Collections.singletonList(passBoxb))//添加周转箱表
+//            BmfObject passBoxb =  BmfUtils.genericFromJsonExt(passBox, "CT1110PassBoxes")
+//            passBoxb.put("id", null)
+//            passBoxb.put("submit", false)
+//            ct1110.put("passBoxes", Collections.singletonList(passBoxb))//添加周转箱表
             sceneGroovyService.buzSceneStart("CT1110",ct1110)
 
 
