@@ -121,7 +121,7 @@ class warehouseInSheetCancel extends AopAfterGroovyClass {
             List<Map<String, Object>> listCT1112s = basicGroovyService.findList(getCT1112SQL)
             for (final def listCT1112 in listCT1112s) {
                 BmfObject objCT1112 = new BmfObject("CT1112")
-                objCT1112.put("id", listCT1112.get("id"))
+                objCT1112.put("id", listCT1112.get("ct1112_id"))
                 objCT1112.put("logisticsStatus", 4)
                 basicGroovyService.updateByPrimaryKeySelective(objCT1112)
             }
