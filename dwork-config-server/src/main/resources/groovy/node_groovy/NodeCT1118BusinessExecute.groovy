@@ -49,7 +49,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
         batchList.forEach(item -> {
             //具体的业务逻辑
 
-            if (item.getString("ext_warehouse_In_application_code") == null) {
+            if (!item.getString("ext_warehouse_In_application_code") ) {
                 throw new BusinessException("入库申请单编码不能为空")
             }
             //1、创建入库任务单-PC
@@ -75,6 +75,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             }
         })
         throw new ScriptInterruptedException("不流转")
+
     }
 
     private BmfObject createWarehouseInTask(BmfObject nodeData, BmfObject item) {
@@ -143,12 +144,52 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
         basicGroovyService.saveOrUpdate(warehouseInSheet)
         return warehouseInSheet
     }
+    private void createFlatTask(BmfObject nodeData, BmfObject item) {
 
+        /*
+      **  2、创建平面库入库任务 CT1119
+       */
+
+       // def jsonCT1119=new JSONObject()
+        BmfObject ct1119 =BmfUtils.genericFromJsonExt(item.deepClone(),"CT1119")
+        BmfObject tasks =  BmfUtils.genericFromJsonExt(item.deepClone(), "CT1119Tasks")
+        BmfObject passBoxc =  BmfUtils.genericFromJsonExt(item.deepClone(), "CT1119PassBoxes")
+        passBoxc.put("id", null)
+        passBoxc.put("submit", false)
+        ct1119.put("passBoxes", Arrays.asList(passBoxc))//添加周转箱表
+
+        tasks.put("id",null)
+        ct1119.put("tasks", Arrays.asList(tasks))
+
+        //入库申请单号
+        ct1119.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))
+        //目标仓库编码
+        ct1119.put("ext_target_warehouse_code", item.getString("warehouseCode"))
+        //目标仓库名称
+        ct1119.put("ext_target_warehouse_name", item.getString("warehouseName"))
+        //jsonCT1119.putAll (ct1119)
+        sceneGroovyService.buzSceneStart("CT1119",ct1119)
+
+//        //为周转箱实时表的批次字段赋值
+//        BmfObject passBoxReal= basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
+//        if (!passBoxReal){
+//            throw new  BusinessException("周转箱实时信息不存在")
+//        }
+//        else {
+//            passBoxReal.put("ext_batch_number",batchNumber)
+//            basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
+//        }
+    }
     private void createIntelligenthandlingTask(BmfObject nodeData, BmfObject item,BmfObject warehouseInSheet) {
 
         /*
       **  3、创建智能设备搬运任务
        */
+
+
+        //默认批次编码为：ZD
+        String batchNumber="ZD"
+        if  (!item.get("ext_batch_number")){batchNumber="ZD"}else{batchNumber=item.get("ext_batch_number")}
 
         //组装周转箱表
         List<BmfObject> passBoxes2 = nodeData.getList("passBoxes")
@@ -170,7 +211,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             String sourceOrderType = basicGroovyService.getByCode("WarehouseInApplication", item.getString("ext_warehouse_In_application_code")).getString("sourceOrderType")
 
             objCT1112.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))
-//入库申请单号
+            //入库申请单号
             objCT1112.put("ext_business_type", warehouseInType)//业务类型 采购入库等
             objCT1112.put("ext_business_source", sourceOrderType)//业务来源 采购订单等
             objCT1112.put("ext_business_source_code", sourceOrderCode)//来源编码
@@ -202,6 +243,16 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             passBoxb.put("id", null);
             passBoxb.put("submit", false);
             objCT1112.put("passBoxes", Collections.singletonList(passBoxb));//添加周转箱表
+
+            //为周转箱实时表的批次字段赋值
+            BmfObject passBoxReal= basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
+            if (!passBoxReal){
+                throw new  BusinessException("周转箱实时信息不存在")
+            }
+            else {
+                passBoxReal.put("ext_batch_number",batchNumber)
+                basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
+            }
 
             sceneGroovyService.buzSceneStart("CT1112",objCT1112);
 
