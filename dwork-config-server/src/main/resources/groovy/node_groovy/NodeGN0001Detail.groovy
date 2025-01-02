@@ -52,6 +52,7 @@ class NodeGN0001Detail extends NodeGroovyClass {
             }
             if (isPackScheme != null) {
                 BigDecimal bigDecimal = isPackScheme.getBigDecimal("packageQuantity")
+                if (!bigDecimal){bigDecimal=nodeData.getBigDecimal("ext_current_received_quantity")}else{bigDecimal}
                 nodeData.put("ext_package_scheme_code", isPackScheme.getString("code"))
                 nodeData.put("ext_package_scheme_name", isPackScheme.getString("name"))
                 nodeData.put("ext_single_box_quantity", bigDecimal)
@@ -60,7 +61,7 @@ class NodeGN0001Detail extends NodeGroovyClass {
         }
         // 佛山中大详情逻辑
         //获取物料的翻包标记
-        if (ObjectUtils.isNotEmpty(materialCode)) {
+        if (!materialCode) {
 
             String sqlmain = "select t1.ext_packet_change from dwk_material t\n" +
                     "inner join dwk_material_ext t1 on t.id=t1.ext_material_id\n" +
@@ -71,6 +72,7 @@ class NodeGN0001Detail extends NodeGroovyClass {
             //将SQL取得的是否翻包赋值给nodeData
             nodeData.put("ext_packet_change",SQLMainResult.get("ext_packet_change"))
         }
+        nodeData.put("ext_batch_number","ZD")//批次编码
     }
 
 

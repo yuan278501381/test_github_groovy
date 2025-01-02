@@ -4,6 +4,7 @@ package groovy.node_groovy
 import com.chinajay.virgo.bmf.obj.BmfObject
 import com.chinajay.virgo.utils.BmfUtils
 import com.chinajay.virgo.utils.SpringUtils
+import com.chinajey.application.common.exception.BusinessException
 import com.tengnat.dwork.modules.script.abstracts.NodeGroovyClass
 import com.tengnat.dwork.modules.script.service.BasicGroovyService
 import com.tengnat.dwork.modules.script.service.SceneGroovyService
@@ -37,11 +38,14 @@ class NodeGN0001Submit extends NodeGroovyClass {
             batchList.add(nodeData)
         }
         batchList.forEach(item -> {
-            //标记为翻包，那么创建翻包任务
+
+            //1、校验
+            GN0001Validate(nodeData, item)
+            //2、标记为翻包，那么创建翻包任务
             if (item.getBoolean("ext_packet_change")) {
                 createCt1110(nodeData, item)
             }
-            //标记为不翻包，那么创建入库待确认任务
+            //3、标记为不翻包，那么创建入库待确认任务
             else {
                 createCt1118(nodeData, item)
             }
@@ -56,11 +60,16 @@ class NodeGN0001Submit extends NodeGroovyClass {
         passBoxes.forEach({ passBox ->
             //创建入库待确认任务
             BmfObject ct1118 = new BmfObject("CT1118")
+
+            //默认批次编码为：ZD
+            String batchNumber="ZD"
+            if  (!item.get("ext_batch_number")){batchNumber="ZD"}else{batchNumber=item.get("ext_batch_number")}
             ct1118.put("ext_warehouse_In_application_code", item.getString("ext_warehouse_in_application_code"))//入库申请单编码
             ct1118.put("ext_warehouse_in_type", item.getString("ext_warehouse_in_type"))//入库类型 生产完工；采购入库等
             ct1118.put("ext_material_code", passBox.getString("materialCode"))//物料编码
             ct1118.put("ext_material_name", passBox.getString("materialName"))//物料描述
             ct1118.put("ext_quantity", passBox.getBigDecimal("quantity"))//入库数量
+            ct1118.put("ext_batch_number",batchNumber)//批次编码
 
             //组装移动应用的任务表
             List<BmfObject> tasks = new ArrayList<>()
@@ -76,8 +85,17 @@ class NodeGN0001Submit extends NodeGroovyClass {
             BmfObject passBoxc =  BmfUtils.genericFromJsonExt(passBox, "CT1118PassBoxes")
             passBoxc.put("id", null)
             passBoxc.put("submit", false)
+            passBoxc.put("ext_batch_number",batchNumber)//批次编码
             ct1118.put("passBoxes", Collections.singletonList(passBoxc))//添加周转箱表
-
+            //更新周转箱实时表的批次编码
+           BmfObject passBoxReal= basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
+            if (!passBoxReal){
+                throw new  BusinessException("周转箱实时信息不存在")
+            }
+            else {
+                passBoxReal.put("ext_batch_number",batchNumber)
+                 basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
+                 }
             sceneGroovyService.buzSceneStart("CT1118",ct1118)
 
             //回入库申请单的状态为:Received-已收货
@@ -97,6 +115,11 @@ class NodeGN0001Submit extends NodeGroovyClass {
             //按入库申请单号获得来源单据号码 sourceOrderCode
             String sourceOrderCode =basicGroovyService.getByCode("WarehouseInApplication",item.getString("ext_warehouse_in_application_code")).getString("sourceOrderCode")
             BmfObject ct1110 = new BmfObject("CT1110")
+
+            //默认批次编码为：ZD
+            String batchNumber="ZD"
+            if  (!item.get("ext_batch_number")){batchNumber="ZD"}else{batchNumber=item.get("ext_batch_number")}
+
             //获得当前物料的对象
             def  thisItem=basicGroovyService.getByCode("material", passBox.getString("materialCode"))
             ct1110.put("ext_operateSourceEnum","GN0001")//业务类型：采购入库GN0001等
@@ -110,8 +133,10 @@ class NodeGN0001Submit extends NodeGroovyClass {
             ct1110.put("ext_passboxcode",passBox.getString("passBoxCode"))//周转箱代码
             ct1110.put("ext_passboxname",passBox.getString("passBoxName"))//周转箱名称
             ct1110.put("ext_quantity", passBox.getBigDecimal("quantity"))//装箱数量
+            ct1110.put("ext_batch_number", batchNumber)//批次编码
             def flowUnitname= basicGroovyService.getByCode ("material",passBox.getString("materialCode")).getAndRefreshBmfObject("flowUnit")
             ct1110.put("ext_Unit", flowUnitname.getString("name"))//翻包主表单位
+
 
             //组装移动应用的任务表
             List<BmfObject> tasks = new ArrayList<>()
@@ -122,6 +147,15 @@ class NodeGN0001Submit extends NodeGroovyClass {
             tasks.add(objTask)//添加任务表
             ct1110.put("tasks", tasks)  //添加任务表
 
+            //更新周转箱实时表的批次编码
+            BmfObject passBoxReal= basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
+            if (!passBoxReal){
+                throw new  BusinessException("周转箱实时信息不存在")
+            }
+            else {
+                passBoxReal.put("ext_batch_number",batchNumber)
+                basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
+            }
             //组装移动应用的周转箱表,
             //翻包界面的周转箱,用户按实际箱号扫描,所以不代入,考虑原来的周转箱要清空
             //从当前界面passbox数据复制到指定BmfClass 中,然后将id和submit置空
@@ -132,6 +166,7 @@ class NodeGN0001Submit extends NodeGroovyClass {
             sceneGroovyService.buzSceneStart("CT1110",ct1110)
 
 
+
             //回写入库申请单的状态为:Received-已收货
             BmfObject warehouseInApplication=new BmfObject("WarehouseInApplication")
             warehouseInApplication.put("status","Received")
@@ -140,5 +175,22 @@ class NodeGN0001Submit extends NodeGroovyClass {
         })
 
 
+    }
+
+    private void GN0001Validate(BmfObject nodeData, BmfObject item) {
+
+        BigDecimal ext_quantity=item.getBigDecimal("ext_current_received_quantity")
+
+        List<BmfObject> passBoxes = nodeData.getList("passBoxes")
+        BigDecimal sum = passBoxes.stream().peek(passBox -> {
+            BmfObject passBoxReal = basicGroovyService.findOne("passBoxReal", "passBoxCode", passBox.getString("passBoxCode"))
+            if (passBoxReal == null) {
+                throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]实时信息不存在或生成失败")
+            }
+        }).map(passBox -> passBox.getBigDecimal("receiveQuantity") == null ? BigDecimal.ZERO : passBox.getBigDecimal("receiveQuantity"))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+        if (ext_quantity != sum) {
+            throw new BusinessException("周转箱总数量必须等于本次收货数量")
+        }
     }
 }
