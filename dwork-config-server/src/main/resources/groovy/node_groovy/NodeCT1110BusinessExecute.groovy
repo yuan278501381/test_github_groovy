@@ -46,6 +46,9 @@ class NodeCT1110BusinessExecute extends  NodeGroovyClass {
     //创建入库待确认任务
     private void createCt1118(BmfObject nodeData, BmfObject item) {
 
+        String batchNumber="ZD"
+        if  (!item.get("ext_batch_number")){batchNumber="ZD"}else{batchNumber=item.get("ext_batch_number")}
+
         List<BmfObject> passBoxes = nodeData.getList("passBoxes")
         passBoxes.forEach({ passBox ->
             //创建入库待确认任务
@@ -57,6 +60,7 @@ class NodeCT1110BusinessExecute extends  NodeGroovyClass {
             ct1118.put("ext_quantity", passBox.getBigDecimal("quantity"))//入库数量
             ct1118.put("warehouseCode", item.getString("warehouseCode"))//仓库代码
             ct1118.put("warehouseName", item.getString("warehouseName"))//仓库名称
+            ct1118.put("ext_batch_number", batchNumber)//批次编码
 
             //组装移动应用的任务表
             List<BmfObject> tasks = new ArrayList<>()
@@ -74,9 +78,17 @@ class NodeCT1110BusinessExecute extends  NodeGroovyClass {
             passBoxb.put("submit", false)
             ct1118.put("passBoxes", Collections.singletonList(passBoxb));//添加周转箱表
 
-
             sceneGroovyService.buzSceneStart("CT1118",ct1118)
 
+            //更新周转箱实时表的批次编码
+            BmfObject passBoxReal= basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
+            if (!passBoxReal){
+                throw new  BusinessException("周转箱实时信息不存在")
+            }
+            else {
+                passBoxReal.put("ext_batch_number",batchNumber)
+                basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
+            }
             //回入库申请单的状态为:Received-已收货
             BmfObject warehouseInApplication=new BmfObject("WarehouseInApplication")
             warehouseInApplication.put("status","Received")

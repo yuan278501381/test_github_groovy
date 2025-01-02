@@ -53,7 +53,9 @@ class NodeCT1110Detail extends NodeGroovyClass {
                 }
             }
             if (isPackScheme != null) {
+
                 BigDecimal bigDecimal = isPackScheme.getBigDecimal("packageQuantity")
+                if (!bigDecimal){bigDecimal=nodeData.getBigDecimal("ext_quantity")}else{bigDecimal}
                 nodeData.put("ext_package_scheme_code", isPackScheme.getString("code"))
                 nodeData.put("ext_package_scheme_name", isPackScheme.getString("name"))
                 nodeData.put("ext_single_box_quantity", bigDecimal)
