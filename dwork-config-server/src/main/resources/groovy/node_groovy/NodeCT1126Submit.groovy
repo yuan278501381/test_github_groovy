@@ -62,6 +62,8 @@ class NodeCT1126Submit extends NodeGroovyClass {
                 log.info("==============入库申请单-PDA，提交:按仓库类别名称识别为平面库，进入平面库业务逻辑==============")
 
                 createFlatTask(nodeData,item,warehouseInApplication)
+
+
             }
            else if (basicGroovyService.getByCode("warehouseCategory",
                     basicGroovyService.getByCode("warehouse",item.get("warehouseCode")).getString("categoryCode"))
@@ -94,8 +96,6 @@ class NodeCT1126Submit extends NodeGroovyClass {
 
         //组装行表：Details
         List<BmfObject> details = new ArrayList<>()
-
-        List<BmfObject> warehouseInSheetpassBoxes = new ArrayList<>()
 
         def passBoxes = item.getList("passBoxes")
         passBoxes.forEach { passBox ->
@@ -183,17 +183,63 @@ class NodeCT1126Submit extends NodeGroovyClass {
             batchNumber = item.get("ext_batch_number")
         }
 
+        BmfObject ct1119 = BmfUtils.genericFromJsonExt(item.deepClone(), "CT1119")
+
+        //入库申请单号
+        ct1119.put("ext_warehouse_in_application_code",warehouseInApplication.getString("code"))
+        //目标仓库编码
+        ct1119.put("ext_target_warehouse_code", item.getString("warehouseCode"))
+        //目标仓库名称
+        ct1119.put("ext_target_warehouse_name", item.getString("warehouseName"))
+        ct1119.put("warehouseCode", item.getString("warehouseCode"))
+        ct1119.put("warehouseName", item.getString("warehouseName"))
 
 
+        //组装周转箱表
+        def passBoxesb=item.getList("passBoxes")
+        List<BmfObject> PassBoxes = new ArrayList<>()
+        passBoxesb.forEach { passBox ->
 
-        //为周转箱实时表的批次字段赋值
-        BmfObject passBoxReal = basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
-        if (!passBoxReal) {
-            throw new BusinessException("周转箱实时信息不存在")
-        } else {
-            passBoxReal.put("ext_batch_number", batchNumber)
-            basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
+            BmfObject objPassbox = BmfUtils.genericFromJsonExt(passBox, "CT1119PassBoxes")
+            objPassbox.put("id", null)
+            objPassbox.put("submit", false)
+            PassBoxes.add(objPassbox)
+
+            //为周转箱实时表的批次字段赋值
+            BmfObject passBoxReal = basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
+            if (!passBoxReal) {
+                throw new BusinessException("周转箱实时信息不存在")
+            } else {
+                passBoxReal.put("ext_batch_number", batchNumber)
+                basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
+            }
         }
+
+        List<BmfObject> tasks = new ArrayList<>()
+        //根据物料分组
+        Map<String, List<BmfObject>> passBoxRealGroup = PassBoxes.stream().collect(Collectors.groupingBy(passBox -> ((BmfObject) passBox).getString("materialCode")))
+        passBoxRealGroup.forEach((materialCode, passBox) -> {
+            BmfObject objTask = new BmfObject("CT1119Tasks")
+            //task.put("thisPallet", true)
+            //task.put("palletCode", palletCode)
+            //task.put("palletName", palletName)
+
+            //为task表的物理编码赋值
+            objTask.put("materialCode", materialCode)
+            //为task表的物料描述赋值
+            objTask.put("materialName", passBox.get(0).getString("materialName"))
+            //为task表的物料数量赋值
+            objTask.put("quantityUnit", passBox.get(0).getAndRefreshBmfObject("quantityUnit"))
+
+            tasks.add(objTask)
+            // throw new BusinessException("测试")
+        })
+
+        ct1119.put("tasks", tasks)//添加任务表
+        ct1119.put("passBoxes", PassBoxes)//添加周转箱表
+
+        sceneGroovyService.buzSceneStart("CT1119", ct1119)
+        log.info("==============入库申请单-PDA，提交:按仓库类别名称识别为平面库，进入平面库业务逻辑 完成==============主表ID:"+ct1119.getInteger("id"))
 
     }
 
@@ -272,6 +318,15 @@ class NodeCT1126Submit extends NodeGroovyClass {
             }
 
             sceneGroovyService.buzSceneStart("CT1112", objCT1112);
+
+            //为周转箱实时表的批次字段赋值
+            BmfObject passBoxReal2 = basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
+            if (!passBoxReal2) {
+                throw new BusinessException("周转箱实时信息不存在")
+            } else {
+                passBoxReal2.put("ext_batch_number", batchNumber)
+                basicGroovyService.updateByPrimaryKeySelective(passBoxReal2)
+            }
 
         })
 
