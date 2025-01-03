@@ -62,7 +62,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
                     .getString("name") contains("平面"))
             {
 
-                log.info("==============按仓库类别名称识别为平面库==============")
+                log.info("==============按仓库类别名称识别为平面库，进入平面库业务逻辑==============")
                 //createFlatTask(nodeData, item)
                 //平面库入库任务-PDA 在本场景的第一个节点,且平面入库任务的周转箱不做拆分,所以直接返回nodedata,场景自动流转
                 item.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))
@@ -78,7 +78,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
                     basicGroovyService.getByCode("warehouse", item.getString("warehouseCode")).getString("categoryCode"))
                     .getString("name") contains("CTU"))
             {
-                log.info("==============按仓库类别名称识别为CTU库==============")
+                log.info("==============按仓库类别名称识别为CTU库，进入CTU库业务逻辑==============")
                 createIntelligenthandlingTask(nodeData, item, warehouseInSheet)
             }
             else {throw new BusinessException("仓库类别名称识别失败,不包含平面仓、CTU仓中二者中的一种，未识别的业务逻辑！")}
