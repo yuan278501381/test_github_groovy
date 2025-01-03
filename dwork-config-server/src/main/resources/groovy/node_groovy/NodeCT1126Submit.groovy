@@ -240,7 +240,6 @@ class NodeCT1126Submit extends NodeGroovyClass {
 
         sceneGroovyService.buzSceneStart("CT1119", ct1119)
         log.info("==============入库申请单-PDA，提交:按仓库类别名称识别为平面库，进入平面库业务逻辑 完成==============主表ID:"+ct1119.getInteger("id"))
-
     }
 
     private void createIntelligenthandlingTask(BmfObject nodeData, BmfObject item,BmfObject warehouseInApplication,BmfObject warehouseInSheet) {
