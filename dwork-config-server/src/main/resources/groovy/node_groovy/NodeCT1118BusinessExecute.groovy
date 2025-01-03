@@ -207,7 +207,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
         }
 
         //组装周转箱表
-        List<BmfObject> passBoxes2 = nodeData.getList("passBoxes")
+        List<BmfObject> passBoxes2 = item.getList("passBoxes")
         //            if (CollectionUtil.isEmpty(passBoxes)) {
         //                throw new BusinessException("周转箱数据不能为空")
         //            }
