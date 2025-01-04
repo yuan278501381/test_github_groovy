@@ -70,6 +70,8 @@ class warehouseInApplicationIssued extends AopAfterGroovyClass {
             }
             //如果不为采购收货则创建入库待确认任务-PDA
             else {
+
+
                 //深拷贝一份，防止修改循环外的数据源
                 warehouseInApplication = warehouseInApplication.deepClone()
                 // 入库申请单明细
@@ -93,6 +95,7 @@ class warehouseInApplicationIssued extends AopAfterGroovyClass {
                     objCT1118.put("ext_material_code", detailList.get(0).getString("materialCode"))//物料编码
                     objCT1118.put("ext_material_name", detailList.get(0).getString("materialName"))//物料描述
                     objCT1118.put("ext_quantity", totalQuantity)//入库数量
+                    objCT1118.put("ext_batch_number", "ZD")//批次编码
 
                     //组装移动应用任务表
                     List<BmfObject> tasks = new ArrayList<>()
