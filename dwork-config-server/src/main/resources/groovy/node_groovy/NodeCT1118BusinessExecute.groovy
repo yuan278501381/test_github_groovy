@@ -310,7 +310,6 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
 
             sceneGroovyService.buzSceneStart("CT1112", objCT1112);
 
-
         })
 
     }
