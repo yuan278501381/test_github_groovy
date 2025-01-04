@@ -1,8 +1,5 @@
 package groovy.node_groovy
 
-import com.alibaba.fastjson.JSONArray
-import com.alibaba.fastjson.JSONObject
-import com.alibaba.fastjson.JSON
 import com.chinajay.virgo.bmf.obj.BmfObject
 import com.chinajay.virgo.bmf.service.BmfService
 import com.chinajay.virgo.utils.BmfUtils
@@ -36,82 +33,75 @@ class NodeCT1126Submit extends NodeGroovyClass {
 
     @Override
     Object runScript(BmfObject nodeData) {
-
-        List<BmfObject> batchList = new ArrayList<>()
-
-        if (nodeData.containsKey("batchList")) {
-            batchList = nodeData.getList("batchList")
-        } else {
-            batchList.add(nodeData)
+        //这个是功能型不会批量提交的情况肯定是单个
+        //1、创建入库申请单-PC
+        BmfObject warehouseInApplication = createWarehouseInApplication(nodeData)
+        log.info("==============入库申请单-PDA，提交:创建入库申请单-PC 完成==============")
+        //2、创建入库任务单-PC
+        BmfObject warehouseInSheet = createWarehouseInTask(nodeData, warehouseInApplication)
+        log.info("==============入库申请单-PDA，提交:创建入库任务单-PC 完成==============")
+        //3、创建入库任务-
+        def warehouse = basicGroovyService.getByCode("warehouse", nodeData.getString("warehouseCode"))
+        if (warehouse == null) {
+            throw new BusinessException("未找到仓库信息，warehouseCode：[" + nodeData.getString("warehouseCode") + "]")
         }
-        batchList.forEach(item -> {
-
-
-
-            //1、创建入库申请单-PC
-            BmfObject warehouseInApplication = createWarehouseInApplication(nodeData, item)
-            log.info("==============入库申请单-PDA，提交:创建入库申请单-PC 完成==============")
-            //2、创建入库任务单-PC
-            BmfObject warehouseInSheet = createWarehouseInTask (nodeData, item, warehouseInApplication)
-            log.info("==============入库申请单-PDA，提交:创建入库任务单-PC 完成==============")
-            //3、创建入库任务-
-            if (basicGroovyService.getByCode("warehouseCategory",
-                    basicGroovyService.getByCode("warehouse",item.get("warehouseCode")).getString("categoryCode"))
-                    .getString("name") contains("平面"))//平面库
-
-            {
-                log.info("==============入库申请单-PDA，提交:按仓库类别名称识别为平面库，进入平面库业务逻辑==============")
-
-                createFlatTask(nodeData,item,warehouseInApplication)
-
-
-            }
-            else if (basicGroovyService.getByCode("warehouseCategory",
-                    basicGroovyService.getByCode("warehouse",item.get("warehouseCode")).getString("categoryCode"))
-                    .getString("name") contains("CTU"))//CTU库
-            {
-                log.info("==============入库申请单-PDA，提交:按仓库类别名称识别为CTU库，进入CTU库业务逻辑==============")
-
-                createIntelligenthandlingTask(nodeData, item,warehouseInApplication,warehouseInSheet)
-            }
-            else {throw new BusinessException("仓库类别名称识别失败,不包含平面仓、CTU仓中二者中的一种，未识别的业务逻辑！")}
-
-        })
-
-        return  null
+        def warehouseCategory = basicGroovyService.getByCode("warehouseCategory", warehouse.getString("categoryCode"))
+        if (warehouseCategory == null) {
+            throw new BusinessException("未找到仓库类别信息，categoryCode：[" + nodeData.getString("categoryCode") + "]")
+        }
+        if (warehouseCategory.getString("name")?.contains("平面")) {
+            //平面库
+            log.info("==============入库申请单-PDA，提交:按仓库类别名称识别为平面库，进入平面库业务逻辑==============")
+            createFlatTask(nodeData, warehouseInApplication)
+        } else if (warehouseCategory.getString("name")?.contains("CTU")) {
+            //CTU库
+            log.info("==============入库申请单-PDA，提交:按仓库类别名称识别为CTU库，进入CTU库业务逻辑==============")
+            createIntelligenthandlingTask(nodeData, warehouseInApplication, warehouseInSheet)
+        } else {
+            throw new BusinessException("仓库类别名称识别失败,不包含平面仓、CTU仓中二者中的一种，未识别的业务逻辑！")
+        }
+        //throw new BusinessException("ttttttttttt")
+        return null
     }
 
-    private BmfObject createWarehouseInApplication(BmfObject nodeData, BmfObject item) {
-
+    private BmfObject createWarehouseInApplication(BmfObject nodeData) {
         /*
         **  1、创建入库申请单
         */
         //为入库任务单赋值, 首先对入库任务单实例化一个对象,然后为其主表\子表\周转箱详情表赋值,然后用save方法保存
         BmfObject warehouseInApplication = new BmfObject("WarehouseInApplication")
         //入库类型
-        warehouseInApplication.put("warehouseInType", item.getString("ext_warehouse_in_type"))
+        warehouseInApplication.put("warehouseInType", nodeData.getString("ext_warehouse_in_type"))
         //初始化单据状态
         //toConfirmed-待确认;pendingOutWarehouse-待出库;pendingInWarehouse-待入库;completed-已入库;cancel-取消;settlement
         // -结算;partialOutWarehouse-部分出库;partialInWarehouse-部分入库
-        warehouseInApplication.put("status","pendingInWarehouse")
-
+        warehouseInApplication.put("status", "pendingInWarehouse")
         //组装行表：Details
         List<BmfObject> details = new ArrayList<>()
 
-        def passBoxes = item.getList("passBoxes")
-        passBoxes.forEach { passBox ->
+        def passBoxes = nodeData.getList("passBoxes")
+        //按照物料编码合并入库申请单明细
+        def passBoxesMapByMaterialCode = passBoxes.stream().collect(Collectors.groupingBy { it -> ((BmfObject) it).getString("materialCode") })
+        int lineNum = 0
+        for (final def key in passBoxesMapByMaterialCode.keySet()) {
+            ++lineNum
+            List<BmfObject> passBoxesByMaterialCode = passBoxesMapByMaterialCode.get(key)
+            BigDecimal sumQuantity = passBoxesByMaterialCode.stream().map(bmfObject -> bmfObject.getBigDecimal("quantity")).reduce(BigDecimal.ZERO, BigDecimal::add)
+            BmfObject passBox = passBoxesByMaterialCode.get(0)
+            def matrial = basicGroovyService.getByCode("material", passBox.getString("materialCode"))
             BmfObject detail = new BmfObject("WarehouseInApplicationDetail")
             detail.put("materialCode", passBox.getString("materialCode"))//物料编码
             detail.put("materialName", passBox.getString("materialName"))//物料描述
-            detail.put("quantity", passBox.getBigDecimal("quantity"))//数量
-            detail.put("specifications", basicGroovyService.getByCode("material",passBox.getString("materialCode")).getString("specifications"))//规格型号
-            detail.put("wait_inbound_quantity", passBox.getBigDecimal("quantity"))//待入库数量
+            detail.put("quantity", sumQuantity)//数量
+            detail.put("specifications", matrial?.getString("specifications"))
+            //规格型号
+            detail.put("wait_inbound_quantity", sumQuantity)//待入库数量
             detail.put("warehoused_quantity", BigDecimal.ZERO)//已入库数量
-            detail.put("unit",basicGroovyService.getByCode("material", passBox.getString("materialCode")).getAndRefreshBmfObject("flowUnit"))//计量单位
-            detail.put("warehouseCode", item.getString("warehouseCode"))
-            detail.put("warehouseName", item.getString("warehouseName"))
-            detail.put("lineNum",-1)
-
+            detail.put("unit", matrial?.getAndRefreshBmfObject("flowUnit"))
+            //计量单位
+            detail.put("warehouseCode", nodeData.getString("warehouseCode"))
+            detail.put("warehouseName", nodeData.getString("warehouseName"))
+            detail.put("lineNum", lineNum)
             details.add(detail)
         }
         //对入库任务单行表赋值
@@ -124,14 +114,10 @@ class NodeCT1126Submit extends NodeGroovyClass {
         //保存入库任务单
         basicGroovyService.saveOrUpdate(warehouseInApplication)
         return warehouseInApplication
-
-
     }
 
 
-    private BmfObject createWarehouseInTask(BmfObject nodeData, BmfObject item,BmfObject warehouseInApplication)
-    {
-
+    private BmfObject createWarehouseInTask(BmfObject nodeData, BmfObject warehouseInApplication) {
         /*
         **  2、创建入库任务单
         */
@@ -143,65 +129,81 @@ class NodeCT1126Submit extends NodeGroovyClass {
         //toConfirmed-待确认;pendingOutWarehouse-待出库;pendingInWarehouse-待入库;completed-已入库;cancel-取消;settlement
         // -结算;partialOutWarehouse-部分出库;partialInWarehouse-部分入库
         warehouseInSheet.put("status", "pendingInWarehouse")
-
+        //组装周转箱
+        def passBoxes = nodeData.getList("passBoxes")
+        Map<String, List<BmfObject>> passBoxesMapByMaterialCode = passBoxes.stream().collect(Collectors.groupingBy { it -> ((BmfObject) it).getString("materialCode") })
         //组装行表：Details
         List<BmfObject> details = new ArrayList<>()
-        def sourceDetail=warehouseInApplication.getAndRefreshList("main_idAutoMapping")
-        sourceDetail.forEach { line->
+        def sourceDetail = warehouseInApplication.getAndRefreshList("main_idAutoMapping")
+        sourceDetail.forEach { line ->
+            //组装周转箱表
+            List<BmfObject> warehouseInSheetPassBoxs = new ArrayList<>()
+            List<BmfObject> passBoxesByMaterialCode = passBoxesMapByMaterialCode.get(line.getString("materialCode"))
+            if (passBoxesByMaterialCode != null) {
+                passBoxesByMaterialCode.forEach { passBox ->
+                    BmfObject warehouseInSheetPassBox = new BmfObject("warehouseInSheetPassBox")
+                    warehouseInSheetPassBox.put("quantity", passBox.getBigDecimal("quantity"))//数量
+                    warehouseInSheetPassBox.put("passBoxName", passBox.getString("passBoxName"))//周转箱名称
+                    warehouseInSheetPassBox.put("passBoxCode", passBox.getString("passBoxCode"))//周转箱编码
+                    warehouseInSheetPassBox.put("unit", line.get("unit"))//单位
+                    warehouseInSheetPassBox.put("passBoxRealCode", passBox.getString("code"))//周转箱实时编码
+                    warehouseInSheetPassBoxs.add(warehouseInSheetPassBox)
+                }
+            }
             BmfObject detail = new BmfObject("warehouseInSheetDetail")
             detail.put("materialCode", line.getString("materialCode"))//物料编码
             detail.put("materialName", line.getString("materialName"))//物料描述
-            detail.put("specifications",item.getString("specifications"))//规格
+            detail.put("specifications", nodeData.getString("specifications"))//规格
             detail.put("quantity", line.getBigDecimal("quantity"))//数量
             detail.put("wait_inbound_quantity", line.getBigDecimal("quantity"))//待入库数量
             detail.put("warehoused_quantity", BigDecimal.ZERO)//已入库数量
-            detail.put("unit",basicGroovyService.getByCode("material", line.getString("materialCode")).getAndRefreshBmfObject("flowUnit"))//计量单位
-            detail.put("warehouseCode", item.getString("warehouseCode"))//仓库编码
-            detail.put("warehouseName", item.getString("warehouseName"))//仓库名称
-            detail.put("lineNum",-1)
+            detail.put("unit", line.get("unit"))//计量单位
+            detail.put("warehouseCode", nodeData.getString("warehouseCode"))//仓库编码
+            detail.put("warehouseName", nodeData.getString("warehouseName"))//仓库名称
+            detail.put("lineNum", line.get("lineNum"))
             detail.put("fatherId", -1)//从入库申请-PDA的单据没有fatherID，因为无关联的入库待确认任务，用默认值-1，
             detail.put("warehouseInApplicationCode", warehouseInApplication.getString("code")) //入库申请单编码，从函createWarehouseInApplication回调
-            detail.put("warehouseInSheetDetailAutoMapping", item.getAndRefreshList("warehouseInSheetDetailAutoMapping"))
-
+            detail.put("warehouseInSheetDetailAutoMapping", warehouseInSheetPassBoxs)
             details.add(detail)
         }
-
         warehouseInSheet.put("mainidAutoMapping", details)
 
         //设置入库任务单编码
         basicGroovyService.setCode(warehouseInSheet)
         //保存入库任务单
         basicGroovyService.saveOrUpdate(warehouseInSheet)
+
         return warehouseInSheet
     }
-    private void createFlatTask(BmfObject nodeData, BmfObject item,BmfObject warehouseInApplication) {
+
+    private void createFlatTask(BmfObject nodeData, BmfObject warehouseInApplication) {
         /*
         **  3、创建 入库任务-平面库
         */
         //默认批次编码为：ZD
         String batchNumber = "ZD"
-        if (!item.get("ext_batch_number")) {
+        if (!nodeData.get("ext_batch_number")) {
             batchNumber = "ZD"
         } else {
-            batchNumber = item.get("ext_batch_number")
+            batchNumber = nodeData.get("ext_batch_number")
         }
 
         BmfObject objCT1119 = new BmfObject("CT1119")
 
         //入库申请单号
-        objCT1119.put("ext_warehouse_in_application_code",warehouseInApplication.getString("code"))
+        objCT1119.put("ext_warehouse_in_application_code", warehouseInApplication.getString("code"))
         //目标仓库编码
-        objCT1119.put("ext_target_warehouse_code", item.getString("warehouseCode"))
+        objCT1119.put("ext_target_warehouse_code", nodeData.getString("warehouseCode"))
         //目标仓库名称
-        objCT1119.put("ext_target_warehouse_name", item.getString("warehouseName"))
+        objCT1119.put("ext_target_warehouse_name", nodeData.getString("warehouseName"))
         //入库类型
-        objCT1119.put("ext_warehouse_in_type",item.getString("ext_warehouse_in_type"))
-        objCT1119.put("warehouseCode", item.getString("warehouseCode"))
-        objCT1119.put("warehouseName", item.getString("warehouseName"))
+        objCT1119.put("ext_warehouse_in_type", nodeData.getString("ext_warehouse_in_type"))
+        objCT1119.put("warehouseCode", nodeData.getString("warehouseCode"))
+        objCT1119.put("warehouseName", nodeData.getString("warehouseName"))
 
 
         //组装周转箱表
-        def passBoxesb=item.getList("passBoxes")
+        def passBoxesb = nodeData.getList("passBoxes")
         List<BmfObject> PassBoxes = new ArrayList<>()
         passBoxesb.forEach { passBox ->
 
@@ -250,21 +252,21 @@ class NodeCT1126Submit extends NodeGroovyClass {
         // log.info(JSONObject.toJSONString(objCT1119))
     }
 
-    private void createIntelligenthandlingTask(BmfObject nodeData, BmfObject item,BmfObject warehouseInApplication,BmfObject warehouseInSheet) {
+    private void createIntelligenthandlingTask(BmfObject nodeData, BmfObject warehouseInApplication, BmfObject warehouseInSheet) {
         /*
         **  4、创建 入库任务-智能搬运设备
         */
 
         //默认批次编码为：ZD
         String batchNumber = "ZD"
-        if (!item.get("ext_batch_number")) {
+        if (!nodeData.get("ext_batch_number")) {
             batchNumber = "ZD"
         } else {
-            batchNumber = item.get("ext_batch_number")
+            batchNumber = nodeData.get("ext_batch_number")
         }
 
         //组装周转箱表
-        List<BmfObject> passBoxes2 = item.getList("passBoxes")
+        List<BmfObject> passBoxes2 = nodeData.getList("passBoxes")
         //            if (CollectionUtil.isEmpty(passBoxes)) {
         //                throw new BusinessException("周转箱数据不能为空")
         //            }
@@ -273,6 +275,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
             //CT1112 滚筒线搬运任务
             BmfObject objCT1112 = new BmfObject("CT1112")
 
+            def warehouseCategoryCode=basicGroovyService.getByCode("warehouse", nodeData.getString("warehouseCode")).getString("categoryCode")
             //按传入的入库申请单号，从入库申请单表头获得来源单号
             String sourceOrderCode = warehouseInApplication.getString("sourceOrderCode")
             //按传入的入库申请单号，从入库申请单表头获得入库类型
@@ -280,7 +283,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
             //按传入的入库申请单号，从入库申请单表头获得来源单据类型
             String sourceOrderType = warehouseInApplication.getString("sourceOrderType")
 
-            objCT1112.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))
+            objCT1112.put("ext_warehouse_in_application_code", nodeData.getString("ext_warehouse_In_application_code"))
             //入库申请单号
             objCT1112.put("ext_business_type", warehouseInType)//业务类型 采购入库等
             objCT1112.put("ext_business_source", sourceOrderType)//业务来源 采购订单等
@@ -288,7 +291,8 @@ class NodeCT1126Submit extends NodeGroovyClass {
             objCT1112.put("ext_pass_box_code", passBox.getString("passBoxCode"))//周转箱编码
 
 
-            objCT1112.put("ext_end_point", getWarehouse2ByLocation(item.getString("warehouseCode")).getString("bindingResourceCode"))//滚筒线目标位置
+            objCT1112.put("ext_end_point", getWarehouse2ByLocation(warehouseCategoryCode,1))
+//滚筒线目标位置
             objCT1112.put("ext_in_out_type", "in")//出入类型
             objCT1112.put("ext_sheet_code", warehouseInSheet.getString("code"))//任务单编码
             objCT1112.put("ext_inventory_workbench_code", "")//工作台编码, 仅出库时有效,用于记录几号滚筒线
@@ -329,37 +333,21 @@ class NodeCT1126Submit extends NodeGroovyClass {
 
     }
 
-    def getWarehouse2ByLocation(String warehouseCode) {
-        DomainBindResource domainBindResource = new DomainBindResource()
-        //获取仓库对应库位
-        List<ObjectResource> storageLocationResources = domainBindResource.getBindResources("warehouse", warehouseCode, "storageLocation")
-        //获取库位对应位置
-        List<String> storageLocationCodes = storageLocationResources.stream().map {
-            it.getCode()
-        }.collect(Collectors.toList())
+    def getWarehouse2ByLocation(String code,Integer mode) {
+        // mode=1时，代表按仓库类别代码查询，返回一个最小空位置    call proc_getWarehouseLocation ('CB1003',1)
+        //mode=2时，代表按仓库代码查询，返回一个最小空位置         call proc_getWarehouseLocation ('CK0007',2)
+        String sSQL
+                sSQL= "call proc_getWarehouseLocation ('"
+                sSQL+=code+"',"
+                sSQL+= mode
+                sSQL+=")"
 
-        def locationBindingMap = resourceBindingService.batchGetResourceBinding("storageLocation", storageLocationCodes, "location")
-
-        List<BmfObject> allLocationList = new ArrayList<>();
-        locationBindingMap.forEach((location, locationList) -> {
-            allLocationList.addAll(locationList);
-        });
-
-        def passBoxRealList = bmfService.find("passBoxReal")
-        def passBoxLocations = passBoxRealList.stream().map {
-            it.getString("locationCode")
-        }.collect(Collectors.toList())
-
-        allLocationList.remove(passBoxLocations)
-        if (allLocationList.size() == 0) {
-            throw new BusinessException("没有可推荐的位置")
+        def sqlResult = basicGroovyService.findOne(sSQL)
+        def location = sqlResult.get("location_code")
+        if (!location){
+            throw new BusinessException("未找到最小空库位，请检查后重试！ 传入参数为 code:"+code+",mode:"+mode+"(1-按仓库类别编码；2-按仓库编码)")
         }
-        // 按 code 排序并返回最小的元素
-        def location = allLocationList.stream()
-                .sorted(Comparator.comparing { ((BmfObject) it).getString("bindingResourceCode") })
-                .findFirst()
-                .orElseThrow { new BusinessException("排序后没有找到位置") }
-
+        log.info("==============传入参数$code + $mode(1-按仓库类别编码；2-按仓库编码),返回最小空库位$location==============")
         return location
     }
 }
