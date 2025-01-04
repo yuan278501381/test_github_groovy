@@ -66,7 +66,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
 
 
             }
-           else if (basicGroovyService.getByCode("warehouseCategory",
+            else if (basicGroovyService.getByCode("warehouseCategory",
                     basicGroovyService.getByCode("warehouse",item.get("warehouseCode")).getString("categoryCode"))
                     .getString("name") contains("CTU"))//CTU库
             {
@@ -247,7 +247,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
         sceneGroovyService.buzSceneStart("CT1119", objCT1119)
 
         log.info("========入库申请单-PDA，提交:按仓库类别名称识别为平面库，进入平面库业务逻辑 完成=========主表")
-       // log.info(JSONObject.toJSONString(objCT1119))
+        // log.info(JSONObject.toJSONString(objCT1119))
     }
 
     private void createIntelligenthandlingTask(BmfObject nodeData, BmfObject item,BmfObject warehouseInApplication,BmfObject warehouseInSheet) {
