@@ -263,6 +263,8 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             String warehouseInType = basicGroovyService.getByCode("WarehouseInApplication", item.getString("ext_warehouse_In_application_code")).getString("warehouseInType")
             //按传入的入库申请单号，从入库申请单表头获得来源单据类型
             String sourceOrderType = basicGroovyService.getByCode("WarehouseInApplication", item.getString("ext_warehouse_In_application_code")).getString("sourceOrderType")
+            def warehouseCategoryCode=basicGroovyService.getByCode("warehouse", item.getString("warehouseCode")).getString("categoryCode")
+
 
             objCT1112.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))
             //入库申请单号
@@ -272,7 +274,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             objCT1112.put("ext_pass_box_code", passBox.getString("passBoxCode"))//周转箱编码
 
 
-            objCT1112.put("ext_end_point", getWarehouse2ByLocation(item.getString("warehouseCode")).getString("bindingResourceCode"))//滚筒线目标位置
+            objCT1112.put("ext_end_point", getWarehouse2ByLocation(warehouseCategoryCode,1))//滚筒线目标位置
             objCT1112.put("ext_in_out_type", "in")//出入类型
             objCT1112.put("ext_sheet_code", warehouseInSheet.getString("code"))//任务单编码
             objCT1112.put("ext_inventory_workbench_code", "")//工作台编码, 仅出库时有效,用于记录几号滚筒线
@@ -313,49 +315,24 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
         })
 
     }
-/**
- * *入库位置推荐函数：
- *  推荐逻辑：输入一个仓库，,返回编码最小的空位置
- *  1、根据仓库代码获取库位
- *  2、根据库位获取位置
- *  3、剔除部分不可用的位置
- *  4、从剩下的位置中找到一个可用且排序最小的返回
- */
 
-    //    ResourceBindingService resourceBindingService = SpringUtils.getBean(ResourceBindingService.class)
-    //    BmfService bmfService = SpringUtils.getBean(BmfService.class)
 
-    def getWarehouse2ByLocation(String warehouseCode) {
-        DomainBindResource domainBindResource = new DomainBindResource()
-        //获取仓库对应库位
-        List<ObjectResource> storageLocationResources = domainBindResource.getBindResources("warehouse", warehouseCode, "storageLocation")
-        //获取库位对应位置
-        List<String> storageLocationCodes = storageLocationResources.stream().map {
-            it.getCode()
-        }.collect(Collectors.toList())
 
-        def locationBindingMap = resourceBindingService.batchGetResourceBinding("storageLocation", storageLocationCodes, "location")
+    def getWarehouse2ByLocation(String code,Integer mode) {
+        // mode=1时，代表按仓库类别代码查询，返回一个最小空位置    call proc_getWarehouseLocation ('CB1003',1)
+        //mode=2时，代表按仓库代码查询，返回一个最小空位置         call proc_getWarehouseLocation ('CK0007',2)
+        String sSQL
+        sSQL= "call proc_getWarehouseLocation ('"
+        sSQL+=code+"',"
+        sSQL+= mode
+        sSQL+=")"
 
-        List<BmfObject> allLocationList = new ArrayList<>();
-        locationBindingMap.forEach((location, locationList) -> {
-            allLocationList.addAll(locationList);
-        });
-
-        def passBoxRealList = bmfService.find("passBoxReal")
-        def passBoxLocations = passBoxRealList.stream().map {
-            it.getString("locationCode")
-        }.collect(Collectors.toList())
-
-        allLocationList.remove(passBoxLocations)
-        if (allLocationList.size() == 0) {
-            throw new BusinessException("没有可推荐的位置")
+        def sqlResult = basicGroovyService.findOne(sSQL)
+        def location = sqlResult.get("location_code")
+        if (!location){
+            throw new BusinessException("未找到最小空库位，请检查后重试！ 传入参数为 code:"+code+",mode:"+mode+"(1-按仓库类别编码；2-按仓库编码)")
         }
-        // 按 code 排序并返回最小的元素
-        def location = allLocationList.stream()
-                .sorted(Comparator.comparing { ((BmfObject) it).getString("bindingResourceCode") })
-                .findFirst()
-                .orElseThrow { new BusinessException("排序后没有找到位置") }
-
+        log.info("==============传入参数$code + $mode(1-按仓库类别编码；2-按仓库编码),返回最小空库位$location==============")
         return location
     }
 }
