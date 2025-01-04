@@ -186,6 +186,10 @@ class NodeGN0001Submit extends NodeGroovyClass {
             BmfObject passBoxReal = basicGroovyService.findOne("passBoxReal", "passBoxCode", passBox.getString("passBoxCode"))
             if (passBoxReal == null) {
                 throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]实时信息不存在或生成失败")
+
+            }
+            if(passBoxReal.getString("materialCode")!=(item.getString("ext_material_code"))){
+                throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]物料不在任务中，请检查后重试！")
             }
         }).map(passBox -> passBox.getBigDecimal("receiveQuantity") == null ? BigDecimal.ZERO : passBox.getBigDecimal("receiveQuantity"))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
