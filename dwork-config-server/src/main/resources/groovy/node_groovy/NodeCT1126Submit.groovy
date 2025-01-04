@@ -21,7 +21,7 @@ import java.util.stream.Collectors
 /**
  * @Author 袁英杰
  * @Create 2025-01-03
- * @Dscription 发起入库申请-PDA 提交时 创建入库申请单-PC，状态为非初始值，已经生成 入库任务-平面库、入库任务-滚筒线中的一个
+ * @Dscription 发起入库申请-PDA 提交时 创建入库申请单-PC，状态为非初始值，以及生成 入库任务-平面库、入库任务-滚筒线中的一个
  *
  * */
 class NodeCT1126Submit extends NodeGroovyClass {
