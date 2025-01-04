@@ -63,15 +63,15 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             {
 
                 log.info("==============按仓库类别名称识别为平面库，进入平面库业务逻辑==============")
-                //createFlatTask(nodeData, item)
-                //平面库入库任务-PDA 在本场景的第一个节点,且平面入库任务的周转箱不做拆分,所以直接返回nodedata,场景自动流转
-                item.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))
-                //目标仓库编码
-                item.put("ext_target_warehouse_code", item.getString("warehouseCode"))
-                //目标仓库名称
-                item.put("ext_target_warehouse_name", item.getString("warehouseName"))
-                //移动应用场景中第二个节点，dataFlow 自动流转
-                sceneGroovyService.dataFlow(item)
+                createFlatTask(nodeData, item)
+//                //平面库入库任务-PDA 在本场景的第一个节点,且平面入库任务的周转箱不做拆分,所以直接返回nodedata,场景自动流转
+//                item.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))
+//                //目标仓库编码
+//                item.put("ext_target_warehouse_code", item.getString("warehouseCode"))
+//                //目标仓库名称
+//                item.put("ext_target_warehouse_name", item.getString("warehouseName"))
+//                //移动应用场景中第二个节点，dataFlow 自动流转
+//                sceneGroovyService.dataFlow(item)
             }
             //3、根据仓库名称判断，创建智能设备搬运任务-PDA CT1111
            else if (basicGroovyService.getByCode("warehouseCategory",
@@ -155,40 +155,79 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
     }
 
     private void createFlatTask(BmfObject nodeData, BmfObject item) {
-
         /*
-      **  2、创建平面库入库任务 CT1119
-       */
+        **  3、创建 入库任务-平面库
+        */
+        //默认批次编码为：ZD
+        String batchNumber = "ZD"
+        if (!item.get("ext_batch_number")) {
+            batchNumber = "ZD"
+        } else {
+            batchNumber = item.get("ext_batch_number")
+        }
 
-        // def jsonCT1119=new JSONObject()
-        BmfObject ct1119 = BmfUtils.genericFromJsonExt(item.deepClone(), "CT1119")
-        BmfObject tasks = BmfUtils.genericFromJsonExt(item.deepClone(), "CT1119Tasks")
-        BmfObject passBoxc = BmfUtils.genericFromJsonExt(item.deepClone(), "CT1119PassBoxes")
-        passBoxc.put("id", null)
-        passBoxc.put("submit", false)
-        ct1119.put("passBoxes", Arrays.asList(passBoxc))//添加周转箱表
-
-        tasks.put("id", null)
-        ct1119.put("tasks", Arrays.asList(tasks))
+        BmfObject objCT1119 = new BmfObject("CT1119")
 
         //入库申请单号
-        ct1119.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))
+        objCT1119.put("ext_warehouse_in_application_code",item.getString("ext_warehouse_In_application_code"))
         //目标仓库编码
-        ct1119.put("ext_target_warehouse_code", item.getString("warehouseCode"))
+        objCT1119.put("ext_target_warehouse_code", item.getString("warehouseCode"))
         //目标仓库名称
-        ct1119.put("ext_target_warehouse_name", item.getString("warehouseName"))
-        //jsonCT1119.putAll (ct1119)
-        sceneGroovyService.buzSceneStart("CT1119", ct1119)
+        objCT1119.put("ext_target_warehouse_name", item.getString("warehouseName"))
+        //入库类型
+        objCT1119.put("ext_warehouse_in_type",item.getString("ext_warehouse_in_type"))
+        objCT1119.put("warehouseCode", item.getString("warehouseCode"))
+        objCT1119.put("warehouseName", item.getString("warehouseName"))
 
-//        //为周转箱实时表的批次字段赋值
-//        BmfObject passBoxReal= basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
-//        if (!passBoxReal){
-//            throw new  BusinessException("周转箱实时信息不存在")
-//        }
-//        else {
-//            passBoxReal.put("ext_batch_number",batchNumber)
-//            basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
-//        }
+
+        //组装周转箱表
+        def passBoxesb=item.getList("passBoxes")
+        List<BmfObject> PassBoxes = new ArrayList<>()
+        passBoxesb.forEach { passBox ->
+
+            BmfObject objPassbox = BmfUtils.genericFromJsonExt(passBox, "CT1119PassBoxes")
+            objPassbox.put("id", null)
+            objPassbox.put("submit", false)
+            PassBoxes.add(objPassbox)
+
+            //为周转箱实时表的批次字段赋值
+            BmfObject passBoxReal = basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
+            if (!passBoxReal) {
+                throw new BusinessException("周转箱实时信息不存在")
+            } else {
+                passBoxReal.put("ext_batch_number", batchNumber)
+                basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
+            }
+        }
+
+        List<BmfObject> tasks = new ArrayList<>()
+        //根据物料分组
+        Map<String, List<BmfObject>> passBoxRealGroup = PassBoxes.stream().collect(Collectors.groupingBy(passBox -> ((BmfObject) passBox).getString("materialCode")))
+        passBoxRealGroup.forEach((materialCode, passBox) -> {
+            BmfObject objTask = new BmfObject("CT1119Tasks")
+            //task.put("thisPallet", true)
+            //task.put("palletCode", palletCode)
+            //task.put("palletName", palletName)
+
+            //为task表的物理编码赋值
+            objTask.put("materialCode", materialCode)
+            //为task表的物料描述赋值
+            objTask.put("materialName", passBox.get(0).getString("materialName"))
+            //为task表的物料数量赋值
+            objTask.put("quantityUnit", passBox.get(0).getAndRefreshBmfObject("quantityUnit"))
+
+            tasks.add(objTask)
+            // throw new BusinessException("测试")
+        })
+
+        objCT1119.put("tasks", tasks)//添加任务表
+        objCT1119.put("passBoxes", PassBoxes)//添加周转箱表
+
+
+        sceneGroovyService.buzSceneStart("CT1119", objCT1119)
+
+        log.info("========入库申请单-PDA，提交:按仓库类别名称识别为平面库，进入平面库业务逻辑 完成=========主表")
+        // log.info(JSONObject.toJSONString(objCT1119))
     }
 
     private void createIntelligenthandlingTask(BmfObject nodeData, BmfObject item, BmfObject warehouseInSheet) {
