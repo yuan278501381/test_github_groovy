@@ -8,6 +8,7 @@ import com.chinajay.virgo.bmf.service.BmfService
 import com.chinajay.virgo.utils.BmfUtils
 import com.chinajay.virgo.utils.SpringUtils
 import com.chinajey.application.common.exception.BusinessException
+import com.chinajey.application.common.utils.DateUtils
 import com.tengnat.dwork.modules.basic_data.domain.DomainBindResource
 import com.tengnat.dwork.modules.basic_data.service.ResourceBindingService
 import com.tengnat.dwork.modules.manufacturev2.domain.dto.ObjectResource
@@ -115,6 +116,8 @@ class NodeCT1126Submit extends NodeGroovyClass {
         }
         //对入库任务单行表赋值
         warehouseInApplication.put("main_idAutoMapping", details)
+        //获得当前日期写入备注
+        warehouseInApplication.put("remark", DateUtils.dateToStr(new Date(), DateUtils.DATE_TIME_FORMAT))
 
         //设置入库任务单编码
         basicGroovyService.setCode(warehouseInApplication)
@@ -183,16 +186,18 @@ class NodeCT1126Submit extends NodeGroovyClass {
             batchNumber = item.get("ext_batch_number")
         }
 
-        BmfObject ct1119 = BmfUtils.genericFromJsonExt(item.deepClone(), "CT1119")
+        BmfObject objCT1119 = new BmfObject("CT1119")
 
         //入库申请单号
-        ct1119.put("ext_warehouse_in_application_code",warehouseInApplication.getString("code"))
+        objCT1119.put("ext_warehouse_in_application_code",warehouseInApplication.getString("code"))
         //目标仓库编码
-        ct1119.put("ext_target_warehouse_code", item.getString("warehouseCode"))
+        objCT1119.put("ext_target_warehouse_code", item.getString("warehouseCode"))
         //目标仓库名称
-        ct1119.put("ext_target_warehouse_name", item.getString("warehouseName"))
-        ct1119.put("warehouseCode", item.getString("warehouseCode"))
-        ct1119.put("warehouseName", item.getString("warehouseName"))
+        objCT1119.put("ext_target_warehouse_name", item.getString("warehouseName"))
+        //入库类型
+        objCT1119.put("ext_warehouse_in_type",item.getString("ext_warehouse_in_type"))
+        objCT1119.put("warehouseCode", item.getString("warehouseCode"))
+        objCT1119.put("warehouseName", item.getString("warehouseName"))
 
 
         //组装周转箱表
@@ -235,11 +240,14 @@ class NodeCT1126Submit extends NodeGroovyClass {
             // throw new BusinessException("测试")
         })
 
-        ct1119.put("tasks", tasks)//添加任务表
-        ct1119.put("passBoxes", PassBoxes)//添加周转箱表
+        objCT1119.put("tasks", tasks)//添加任务表
+        objCT1119.put("passBoxes", PassBoxes)//添加周转箱表
 
-        sceneGroovyService.buzSceneStart("CT1119", ct1119)
-        log.info("==============入库申请单-PDA，提交:按仓库类别名称识别为平面库，进入平面库业务逻辑 完成==============主表ID:"+ct1119.getInteger("id"))
+
+        sceneGroovyService.buzSceneStart("CT1119", objCT1119)
+
+        log.info("========入库申请单-PDA，提交:按仓库类别名称识别为平面库，进入平面库业务逻辑 完成=========主表")
+       // log.info(JSONObject.toJSONString(objCT1119))
     }
 
     private void createIntelligenthandlingTask(BmfObject nodeData, BmfObject item,BmfObject warehouseInApplication,BmfObject warehouseInSheet) {
@@ -306,6 +314,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
             passBoxb.put("id", null);
             passBoxb.put("submit", false);
             objCT1112.put("passBoxes", Collections.singletonList(passBoxb));//添加周转箱表
+            sceneGroovyService.buzSceneStart("CT1112", objCT1112);
 
             //为周转箱实时表的批次字段赋值
             BmfObject passBoxReal = basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
@@ -314,17 +323,6 @@ class NodeCT1126Submit extends NodeGroovyClass {
             } else {
                 passBoxReal.put("ext_batch_number", batchNumber)
                 basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
-            }
-
-            sceneGroovyService.buzSceneStart("CT1112", objCT1112);
-
-            //为周转箱实时表的批次字段赋值
-            BmfObject passBoxReal2 = basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
-            if (!passBoxReal2) {
-                throw new BusinessException("周转箱实时信息不存在")
-            } else {
-                passBoxReal2.put("ext_batch_number", batchNumber)
-                basicGroovyService.updateByPrimaryKeySelective(passBoxReal2)
             }
 
         })
