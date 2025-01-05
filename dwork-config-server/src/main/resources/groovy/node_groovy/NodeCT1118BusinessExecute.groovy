@@ -263,7 +263,9 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             String warehouseInType = basicGroovyService.getByCode("WarehouseInApplication", item.getString("ext_warehouse_In_application_code")).getString("warehouseInType")
             //按传入的入库申请单号，从入库申请单表头获得来源单据类型
             String sourceOrderType = basicGroovyService.getByCode("WarehouseInApplication", item.getString("ext_warehouse_In_application_code")).getString("sourceOrderType")
-            def warehouseCategoryCode=basicGroovyService.getByCode("warehouse", item.getString("warehouseCode")).getString("categoryCode")
+
+            def warehouseCode= item.getString("warehouseCode")
+            def warehouseCategoryCode=basicGroovyService.getByCode("warehouse", warehouseCode).getString("categoryCode")
 
 
             objCT1112.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))
@@ -274,7 +276,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             objCT1112.put("ext_pass_box_code", passBox.getString("passBoxCode"))//周转箱编码
 
 
-            objCT1112.put("ext_end_point", getWarehouse2ByLocation(warehouseCategoryCode,1))//滚筒线目标位置
+            objCT1112.put("ext_end_point", getWarehouse2ByLocation(warehouseCategoryCode,warehouseCode,1))//滚筒线目标位置
             objCT1112.put("ext_in_out_type", "in")//出入类型
             objCT1112.put("ext_sheet_code", warehouseInSheet.getString("code"))//任务单编码
             objCT1112.put("ext_inventory_workbench_code", "")//工作台编码, 仅出库时有效,用于记录几号滚筒线
@@ -318,12 +320,12 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
 
 
 
-    def getWarehouse2ByLocation(String code,Integer mode) {
+    def getWarehouse2ByLocation(String warehouseCategoryCode,String warehouseCode,Integer mode) {
         // mode=1时，代表按仓库类别代码查询，返回一个最小空位置    call proc_getWarehouseLocationIn ('CB1003',1)
         //mode=2时，代表按仓库代码查询，返回一个最小空位置         call proc_getWarehouseLocationIn ('CK0007',2)
         String sSQL
         sSQL= "call proc_getWarehouseLocationIn ('"
-        sSQL+=code+"',"
+        sSQL+=warehouseCategoryCode+"',"
         sSQL+= mode
         sSQL+=")"
 
@@ -332,6 +334,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
         if (!location){
             throw new BusinessException("未找到最小空库位，请检查后重试！ 传入参数为 code:"+code+",mode:"+mode+"(1-按仓库类别编码；2-按仓库编码)")
         }
+
         log.info("==============传入参数$code + $mode(1-按仓库类别编码；2-按仓库编码),返回最小空库位$location==============")
         return location
     }

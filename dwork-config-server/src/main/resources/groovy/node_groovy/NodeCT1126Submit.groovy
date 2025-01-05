@@ -275,7 +275,9 @@ class NodeCT1126Submit extends NodeGroovyClass {
             //CT1112 滚筒线搬运任务
             BmfObject objCT1112 = new BmfObject("CT1112")
 
-            def warehouseCategoryCode=basicGroovyService.getByCode("warehouse", nodeData.getString("warehouseCode")).getString("categoryCode")
+            def warehouseCode=nodeData.getString("warehouseCode")
+            def warehouseCategoryCode=basicGroovyService.getByCode("warehouse", warehouseCode).getString("categoryCode")
+
             //按传入的入库申请单号，从入库申请单表头获得来源单号
             String sourceOrderCode = warehouseInApplication.getString("sourceOrderCode")
             //按传入的入库申请单号，从入库申请单表头获得入库类型
@@ -291,7 +293,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
             objCT1112.put("ext_pass_box_code", passBox.getString("passBoxCode"))//周转箱编码
 
 
-            objCT1112.put("ext_end_point", getWarehouse2ByLocation(warehouseCategoryCode,1))
+            objCT1112.put("ext_end_point", getWarehouse2ByLocation(warehouseCategoryCode,warehouseCode,1))
 //滚筒线目标位置
             objCT1112.put("ext_in_out_type", "in")//出入类型
             objCT1112.put("ext_sheet_code", warehouseInSheet.getString("code"))//任务单编码
@@ -317,7 +319,10 @@ class NodeCT1126Submit extends NodeGroovyClass {
             BmfObject passBoxb = BmfUtils.genericFromJsonExt(passBox, "CT1112PassBoxes");
             passBoxb.put("id", null);
             passBoxb.put("submit", false);
+            passBoxb.put("quantityUnit", basicGroovyService.getByCode("material", passBox.getString("materialCode")).getAndRefreshBmfObject("flowUnit")
+            )
             objCT1112.put("passBoxes", Collections.singletonList(passBoxb));//添加周转箱表
+
             sceneGroovyService.buzSceneStart("CT1112", objCT1112);
 
             //为周转箱实时表的批次字段赋值
@@ -333,12 +338,12 @@ class NodeCT1126Submit extends NodeGroovyClass {
 
     }
 
-    def getWarehouse2ByLocation(String code,Integer mode) {
+    def getWarehouse2ByLocation(String warehouseCategoryCode,String warehouseCode,Integer mode) {
         // mode=1时，代表按仓库类别代码查询，返回一个最小空位置    call proc_getWarehouseLocationIn ('CB1003',1)
         //mode=2时，代表按仓库代码查询，返回一个最小空位置         call proc_getWarehouseLocationIn ('CK0007',2)
         String sSQL
                 sSQL= "call proc_getWarehouseLocationIn ('"
-                sSQL+=code+"',"
+                sSQL+=warehouseCategoryCode+"',"
                 sSQL+= mode
                 sSQL+=")"
 
@@ -347,6 +352,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
         if (!location){
             throw new BusinessException("未找到最小空库位，请检查后重试！ 传入参数为 code:"+code+",mode:"+mode+"(1-按仓库类别编码；2-按仓库编码)")
         }
+
         log.info("==============传入参数$code + $mode(1-按仓库类别编码；2-按仓库编码),返回最小空库位$location==============")
         return location
     }
