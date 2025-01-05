@@ -339,7 +339,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
     }
 
     def getWarehouse2ByLocation(String warehouseCategoryCode,String warehouseCode) {
-        //传入仓库类别编码和仓库编码，优先返回该仓库编码下的第一个最小（按库位编码排序）空位置，如果前述逻辑返回空值，那么从该仓库类别下返回第一个最小空位置。
+        //传入仓库类别编码和仓库编码，优先返回该仓库编码背后关联库位上的第一个最小（按库位编码排序）空位置，如果前述逻辑返回空值，那么从该仓库类别下返回第一个最小空位置。
         // 示例：  call proc_getWarehouseLocationIn ('CB1002','CK0007') 返回值：WZ00012
         String sSQL
         sSQL= "call proc_getWarehouseLocationIn ('"
@@ -356,3 +356,4 @@ class NodeCT1126Submit extends NodeGroovyClass {
         return location
     }
 }
+
