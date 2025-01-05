@@ -72,7 +72,7 @@ class NodeCT1124Submit extends NodeGroovyClass {
         object.put("ext_business_source", nodeData.getBmfClassName())
         def warehouseCode=nodeData.getString("warehouseCode")
         def warehouseCategoryCode=basicGroovyService.getByCode("warehouse", warehouseCode).getString("categoryCode")
-        def location = getWarehouse2ByLocation(warehouseCategoryCode,warehouseCode,1)
+        def location = getWarehouse2ByLocation(warehouseCategoryCode,warehouseCode)
         log.info("location:{}", location)
         //滚筒线目标位置
         object.put("ext_end_point", location)
@@ -101,22 +101,22 @@ class NodeCT1124Submit extends NodeGroovyClass {
         sceneGroovyService.buzSceneStart("CT1112", object)
     }
 
-    def getWarehouse2ByLocation(String warehouseCategoryCode,String warehouseCode,Integer mode) {
-        // mode=1时，代表按仓库类别代码查询，返回一个最小空位置    call proc_getWarehouseLocationIn ('CB1003',1)
-        //mode=2时，代表按仓库代码查询，返回一个最小空位置         call proc_getWarehouseLocationIn ('CK0007',2)
+    def getWarehouse2ByLocation(String warehouseCategoryCode,String warehouseCode) {
+        //传入仓库类别编码和仓库编码，优先返回该仓库编码下的第一个最小（按库位编码排序）空位置，如果前述逻辑返回空值，那么从该仓库类别下返回第一个最小空位置。
+        // 示例：  call proc_getWarehouseLocationIn ('CB1002','CK0007') 返回值：WZ00012
         String sSQL
         sSQL= "call proc_getWarehouseLocationIn ('"
-        sSQL+=warehouseCategoryCode+"',"
-        sSQL+= mode
-        sSQL+=")"
+        sSQL+=warehouseCategoryCode+"','"
+        sSQL+=warehouseCode
+        sSQL+="')"
 
         def sqlResult = basicGroovyService.findOne(sSQL)
         def location = sqlResult.get("location_code")
         if (!location){
-            throw new BusinessException("未找到最小空库位，请检查后重试！ 传入参数为 code:"+code+",mode:"+mode+"(1-按仓库类别编码；2-按仓库编码)")
+            throw new BusinessException("未找到最小空库位，请检查后重试！ 传入参数为: 仓库类别编码：$warehouseCategoryCode,仓库编码:$warehouseCode")
         }
-
-        log.info("==============传入参数$code + $mode(1-按仓库类别编码；2-按仓库编码),返回最小空库位$location==============")
+        log.info("==============传入参数仓库类别编码：$warehouseCategoryCode，仓库编码：$warehouseCode，返回最小空库位$location==============")
         return location
     }
 }
+
