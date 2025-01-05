@@ -334,8 +334,8 @@ class NodeCT1126Submit extends NodeGroovyClass {
     }
 
     def getWarehouse2ByLocation(String code,Integer mode) {
-        // mode=1时，代表按仓库类别代码查询，返回一个最小空位置    call proc_getWarehouseLocation ('CB1003',1)
-        //mode=2时，代表按仓库代码查询，返回一个最小空位置         call proc_getWarehouseLocation ('CK0007',2)
+        // mode=1时，代表按仓库类别代码查询，返回一个最小空位置    call proc_getWarehouseLocationIn ('CB1003',1)
+        //mode=2时，代表按仓库代码查询，返回一个最小空位置         call proc_getWarehouseLocationIn ('CK0007',2)
         String sSQL
                 sSQL= "call proc_getWarehouseLocationIn ('"
                 sSQL+=code+"',"
