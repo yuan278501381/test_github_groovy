@@ -134,6 +134,7 @@ class NodeGN0001Submit extends NodeGroovyClass {
             ct1110.put("ext_passboxname",passBox.getString("passBoxName"))//周转箱名称
             ct1110.put("ext_quantity", passBox.getBigDecimal("quantity"))//装箱数量
             ct1110.put("ext_batch_number", batchNumber)//批次编码
+            ct1110.put("ext_passbox_realcode",passBox.getString("code")) //周转箱实时表code
             def flowUnitname= basicGroovyService.getByCode ("material",passBox.getString("materialCode")).getAndRefreshBmfObject("flowUnit")
             ct1110.put("ext_Unit", flowUnitname.getString("name"))//翻包主表单位
 
