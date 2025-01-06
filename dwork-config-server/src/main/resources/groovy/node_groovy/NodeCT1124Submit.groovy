@@ -51,25 +51,36 @@ class NodeCT1124Submit extends NodeGroovyClass {
             BmfObject passBox = collect.get(passBoxReal.getString("code"))
             passBoxReal.put("quantity", passBox.get("receiveQuantity"))
             passBoxReal.put("ext_batch_number", nodeData.get("ext_batch_number"))
+
+            sceneGroovyService.batchSynchronizePassBoxInfo(passBoxReals, EquipSourceEnum.PDA.getCode(), nodeData.getBmfClassName())
+            //发起滚筒线搬运一个周转箱一个搬运任务
+            createCT1112Task(nodeData, passBoxReal)
         }
-        sceneGroovyService.batchSynchronizePassBoxInfo(passBoxReals, EquipSourceEnum.PDA.getCode(), nodeData.getBmfClassName())
-        //发起滚筒线搬运一个周转箱一个搬运任务
-        createCT1112Task(nodeData, passBoxReals)
+       // throw new BusinessException("ttttttttttt")
         return nodeData
 
     }
 
-    void createCT1112Task(BmfObject nodeData, List<BmfObject> passBoxes) {
+    void createCT1112Task(BmfObject nodeData, BmfObject passBox) {
+
+        //默认批次编码为：ZD
+        String batchNumber = "ZD"
+        if (!nodeData.get("ext_batch_number")) {
+            batchNumber = "ZD"
+        } else {
+            batchNumber = nodeData.get("ext_batch_number")
+        }
         BmfObject object = new BmfObject("CT1112")
         //来源
         object.put("dataSourceCode", nodeData.getPrimaryKeyValue())
         //来源明细type
         object.put("dataSourceType", nodeData.getBmfClassName())
         //业务类型
-        object.put("ext_business_type", "立库期初盘点")
+        object.put("ext_business_type", "ctuBeginIn")
+        object.put("ext_business_type_name","CTU期初入库")
         object.put("ext_in_out_type", "in")
         //业务来源
-        object.put("ext_business_source", nodeData.getBmfClassName())
+       // object.put("ext_business_source", nodeData.getBmfClassName())
         def warehouseCode=nodeData.getString("warehouseCode")
         def warehouseCategoryCode=basicGroovyService.getByCode("warehouse", warehouseCode).getString("categoryCode")
         def location = getWarehouse2ByLocation(warehouseCategoryCode,warehouseCode)
@@ -78,7 +89,7 @@ class NodeCT1124Submit extends NodeGroovyClass {
         object.put("ext_end_point", location)
         //来源编码
         object.put("ext_business_source_code", nodeData.getPrimaryKeyValue())
-        for (BmfObject passBox in passBoxes) {
+
             BmfObject material = passBox.getAndRefreshBmfObject("material")
             //物料编码
             object.put("ext_material_code", material.getString("code"))
@@ -97,8 +108,17 @@ class NodeCT1124Submit extends NodeGroovyClass {
             task.put("material", material)
             task.put("quantityUnit", material.getAndRefreshBmfObject("flowUnit"));
             object.put("tasks", Arrays.asList(task))
-        }
+
         sceneGroovyService.buzSceneStart("CT1112", object)
+
+        //为周转箱实时表的批次字段赋值
+        BmfObject passBoxReal = basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
+        if (!passBoxReal) {
+            throw new BusinessException("周转箱实时信息不存在")
+        } else {
+            passBoxReal.put("ext_batch_number", batchNumber)
+            basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
+        }
     }
 
     def getWarehouse2ByLocation(String warehouseCategoryCode,String warehouseCode) {
