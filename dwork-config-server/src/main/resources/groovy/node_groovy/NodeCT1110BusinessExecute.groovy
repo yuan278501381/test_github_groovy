@@ -36,7 +36,7 @@ class NodeCT1110BusinessExecute extends  NodeGroovyClass {
             //校验
             ct1118Validate(nodeData,item)
             //创建入库待确认任务
-             createCt1118(nodeData,item)
+            createCt1118(nodeData,item)
 
         })
         return null
@@ -94,9 +94,9 @@ class NodeCT1110BusinessExecute extends  NodeGroovyClass {
             warehouseInApplication.put("status","Received")
             warehouseInApplication.put("id", basicGroovyService.getByCode("WarehouseInApplication",item.getString("ext_warehouse_in_application_code")).getInteger("id"))
             basicGroovyService.updateByPrimaryKeySelective(warehouseInApplication)
-           log.info("==============翻包提交时，清空周转箱："+item.getString("ext_passboxcode")+"==============")
+            log.info("==============翻包提交时，清空周转箱："+item.getString("ext_passboxcode")+"==============")
             //清箱：清空被翻包的周转箱：表头的周转箱编码
-            BmfObject sourcePassBox=basicGroovyService.getByCode("passBoxReal",item.getString("ext_passboxcode"))
+            BmfObject sourcePassBox=basicGroovyService.getByCode("passBoxReal",item.getString("ext_passbox_realcode"))
             sceneGroovyService.clearPassBox(Collections.singletonList(sourcePassBox))
             log.info("==============翻包提交时，清箱完成，passBoxCode："+item.getString("ext_passboxcode")+"==============")
         })
