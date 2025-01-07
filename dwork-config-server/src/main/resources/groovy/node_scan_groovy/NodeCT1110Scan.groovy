@@ -6,7 +6,11 @@ import com.chinajay.virgo.utils.SpringUtils
 import com.tengnat.dwork.modules.manufacturev2.domain.DomainScanResult
 import com.tengnat.dwork.modules.script.abstracts.NodeScanGroovyClass
 import com.tengnat.dwork.modules.script.service.BasicGroovyService
-
+/**
+ * @author 袁英杰
+ * @Create 2025-01-05
+ * @Dscription 翻包界面-PDA 扫描周转箱时自动按包装数量和总数量计算当前周转箱的数量，考虑尾箱
+ * */
 class NodeCT1110Scan extends NodeScanGroovyClass {
 
     //基础类
