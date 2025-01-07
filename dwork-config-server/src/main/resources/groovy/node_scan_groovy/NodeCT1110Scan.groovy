@@ -21,9 +21,10 @@ class NodeCT1110Scan extends NodeScanGroovyClass {
         //扫描的编码
         def passBoxCode = nodeData.getString("code")
         //如果扫描模块是物料关联虚拟周转箱，则进行判断。
-        if ("virtualPassBox" == model) {
+        if (model.contains("PassBox") ) {
             /*
-            virtualPassBox-物料关联虚拟周转箱控件
+            virtualPassBox-虚拟周转箱控件
+            materialRelevancePassBox-物料关联周转箱
              */
             def objNode = nodeData.deepClone()
             def suggestedQuantity = BigDecimal.ZERO
