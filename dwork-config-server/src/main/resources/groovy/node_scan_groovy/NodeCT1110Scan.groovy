@@ -83,7 +83,7 @@ class NodeCT1110Scan extends NodeScanGroovyClass {
             log.info(JSONObject.toJSONString(resultData))
             return result.success(resultData)
         }
-
+        return result.success()
     }
 
 }
