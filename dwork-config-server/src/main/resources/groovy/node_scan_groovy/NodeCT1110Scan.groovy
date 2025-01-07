@@ -19,7 +19,7 @@ class NodeCT1110Scan extends NodeScanGroovyClass {
 
     @Override
     JSONObject runScript(BmfObject nodeData) {
-
+        log.info(JSONObject.toJSONString(nodeData))
         def result = new DomainScanResult()
         //扫描的组件模块
         def model = nodeData.getString("model")
@@ -30,10 +30,11 @@ class NodeCT1110Scan extends NodeScanGroovyClass {
             /*
             virtualPassBox-物料关联虚拟周转箱控件
              */
+            def objNode=nodeData.deepClone()
             def suggestedQuantity = BigDecimal.ZERO
-            def quantity = nodeData.getBigDecimal("ext_quantity")?:BigDecimal.ZERO //取得总数量 即PDA界面上的装箱数量
-            def singleBoxQuantity = nodeData.getBigDecimal("ext_single_box_quantity")?:quantity//取得每包数量,每包数量为空时，取总数量，即1包
-            def passBoxList = nodeData.getList("passBoxes")
+            def quantity = objNode.getBigDecimal("ext_quantity")?:BigDecimal.ZERO //取得总数量 即PDA界面上的装箱数量
+            def singleBoxQuantity = objNode.getBigDecimal("ext_single_box_quantity")?:quantity//取得每包数量,每包数量为空时，取总数量，即1包
+            def passBoxList = objNode.getList("passBoxes")
             //获得PDA界面上所有周转箱数量之和
             BigDecimal allocedSum = passBoxList.stream()
                     .map(passBox -> passBox.getBigDecimal("receiveQuantity") ?: BigDecimal.ZERO)
@@ -60,7 +61,7 @@ class NodeCT1110Scan extends NodeScanGroovyClass {
                     oldPassBoxes.add(objPassBox)
 
                 }
-                def tasklist = nodeData.getList("tasks")
+                def tasklist = objNode.getList("tasks")
                 def material = basicGroovyService.getByCode("material", tasklist.get(0).getString("materialCode"))
                 //new一个JSONObject,然后为新增周转箱字段赋值
                 def objPassBox = basicGroovyService.getByCode("passBox", passBoxCode)
@@ -74,14 +75,14 @@ class NodeCT1110Scan extends NodeScanGroovyClass {
                 passBoxJson.put("passBoxCode", objPassBox.getString("code"))
                 passBoxJson.put("passBoxName", objPassBox.getString("name"))
                 passBoxJson.put("passBoxClassificationAttribute", objPassBox.getAndRefreshBmfObject("passBoxClassification"))//周转箱类别属性id
-                passBoxJson.put("locationCode", nodeData.getString("locationCode"))
-                passBoxJson.put("locationName", nodeData.getString("locationName"))
-                passBoxJson.put("ownerId", nodeData.getInteger("ownerId"))//创建人id
-                passBoxJson.put("ownerCode", nodeData.getString("ownerCode"))//创建人
-                passBoxJson.put("ownerName", nodeData.getString("ownerName"))//创建人名称
-                passBoxJson.put("equipSourceCode", nodeData.getString("equipCode"))
+                passBoxJson.put("locationCode", objNode.getString("locationCode"))
+                passBoxJson.put("locationName", objNode.getString("locationName"))
+                passBoxJson.put("ownerId", objNode.getInteger("ownerId"))//创建人id
+                passBoxJson.put("ownerCode", objNode.getString("ownerCode"))//创建人
+                passBoxJson.put("ownerName", objNode.getString("ownerName"))//创建人名称
+                passBoxJson.put("equipSourceCode", objNode.getString("equipCode"))
                 passBoxJson.put("equipSourceType", "PDA")//来源设备
-                passBoxJson.put("ext_batch_number", nodeData.getString("ext_batch_number"))
+                passBoxJson.put("ext_batch_number", objNode.getString("ext_batch_number"))
 
                 passBoxJson.put("submit", true)
                 passBoxJson.put("receiveQuantity", suggestedQuantity)//新增周转箱的数量按计算结果获得
@@ -90,14 +91,15 @@ class NodeCT1110Scan extends NodeScanGroovyClass {
                 def addPassBox = BmfUtils.genericFromJsonExt(passBoxJson, "CT1110PassBoxes")
                 oldPassBoxes.add(addPassBox)//将新的周转箱增加到原有周转箱list中
 
-                nodeData.remove("passBoxes")//移除周转箱
+                objNode.remove("passBoxes")//移除周转箱
                 JSONArray oldPassBoxesJson = new JSONArray(oldPassBoxes)
-                nodeData.put("passBoxes", oldPassBoxesJson)//将新的周转箱增加到原有周转箱list中
-
+                log.info(JSONObject.toJSONString(oldPassBoxesJson))
+                objNode.put("passBoxes", oldPassBoxesJson)//将新的周转箱增加到原有周转箱list中
+                log.info(JSONObject.toJSONString(objNode))
             }
-            return result.success(nodeData)
+            return result.success(objNode)
         }
-        //return nodeData
+        //return objNode
     }
 
 }
