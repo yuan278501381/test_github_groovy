@@ -94,14 +94,14 @@ class NodeCT1110BusinessExecute extends  NodeGroovyClass {
             warehouseInApplication.put("status","Received")
             warehouseInApplication.put("id", basicGroovyService.getByCode("WarehouseInApplication",item.getString("ext_warehouse_in_application_code")).getInteger("id"))
             basicGroovyService.updateByPrimaryKeySelective(warehouseInApplication)
-            log.info("==============翻包提交时，清空周转箱："+item.getString("ext_passboxcode")+"==============")
-            //清箱：清空被翻包的周转箱：表头的周转箱编码
-            BmfObject sourcePassBox=basicGroovyService.getByCode("passBoxReal",item.getString("ext_passbox_realcode"))
-            sceneGroovyService.clearPassBox(Collections.singletonList(sourcePassBox))
-            log.info("==============翻包提交时，清箱完成，passBoxCode："+item.getString("ext_passboxcode")+"==============")
         })
-
-
+        //清箱：清空被翻包的周转箱：表头的周转箱编码
+        def passBoxRealCode=item.getString("ext_passbox_realcode")
+        log.info("==============翻包提交时，清空周转箱："+item.getString("ext_passboxcode")+"passBoxReal编码：$passBoxRealCode==============")
+        //清箱：清空被翻包的周转箱：表头的周转箱编码
+        BmfObject sourcePassBox=basicGroovyService.getByCode("passBoxReal",passBoxRealCode)
+        sceneGroovyService.clearPassBox(Collections.singletonList(sourcePassBox))
+        log.info("==============翻包提交时，清箱完成，passBoxCode："+item.getString("ext_passboxcode")+"==============")
 
     }
     private void ct1118Validate(BmfObject nodeData, BmfObject item) {
