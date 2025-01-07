@@ -111,8 +111,8 @@ class warehouseInApplicationIssued extends AopAfterGroovyClass {
                 }
             }
 
-            //回入库申请单的状态为:Received-已收货
-            warehouseInApplication.put("status", "Received")
+            //回入库申请单的状态为:issued-已下达
+            warehouseInApplication.put("status", "issued")
 
             //用方法updateByPrimaryKeySelective,更新入库申请单据的状态, warehouseInApplication中包含了ID和Status的值, 所以可以直接更新
             basicGroovyService.updateByPrimaryKeySelective(warehouseInApplication)

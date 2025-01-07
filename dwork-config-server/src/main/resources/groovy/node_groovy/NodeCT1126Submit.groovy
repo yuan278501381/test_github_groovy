@@ -74,8 +74,8 @@ class NodeCT1126Submit extends NodeGroovyClass {
         warehouseInApplication.put("warehouseInType", nodeData.getString("ext_warehouse_in_type"))
         //初始化单据状态
         //toConfirmed-待确认;pendingOutWarehouse-待出库;pendingInWarehouse-待入库;completed-已入库;cancel-取消;settlement
-        // -结算;partialOutWarehouse-部分出库;partialInWarehouse-部分入库
-        warehouseInApplication.put("status", "pendingInWarehouse")//员工编码
+        // -结算;partialOutWarehouse-部分出库;partialInWarehouse-部分入库:issued-已下达
+        warehouseInApplication.put("status", "issued")//单据状态 documentStatus
         warehouseInApplication.put("sendobjectCode",nodeData.getString("sendObjectName"))//员工编码
         warehouseInApplication.put("sendObiectName",nodeData.getString("sendObjectCode"))//员工名称
         warehouseInApplication.put("workShopCode",nodeData.getString("ext_shop_code"))//车间编码
