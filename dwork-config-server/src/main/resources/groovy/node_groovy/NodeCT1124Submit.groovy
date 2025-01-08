@@ -83,10 +83,12 @@ class NodeCT1124Submit extends NodeGroovyClass {
        // object.put("ext_business_source", nodeData.getBmfClassName())
         def warehouseCode=nodeData.getString("warehouseCode")
         def warehouseCategoryCode=basicGroovyService.getByCode("warehouse", warehouseCode).getString("categoryCode")
-        def location = getWarehouse2ByLocation(warehouseCategoryCode,warehouseCode)
+        def location = getWarehouse2ByLocation(warehouseCategoryCode,warehouseCode).toString()
         log.info("location:{}", location)
-        //滚筒线目标位置
-        object.put("ext_end_point", location)
+        object.put("ext_end_point", location)//滚筒线目标位置
+        object.put("targetLocationCode", location)//目标位置编码
+        object.put("targetLocationName", basicGroovyService.getByCode("location", location).getString("name"))//目标位置名称
+
         //来源编码
         object.put("ext_business_source_code", nodeData.getPrimaryKeyValue())
 

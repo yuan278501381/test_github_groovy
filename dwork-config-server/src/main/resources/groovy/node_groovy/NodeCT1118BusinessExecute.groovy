@@ -275,8 +275,10 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             objCT1112.put("ext_business_source_code", sourceOrderCode)//来源编码
             objCT1112.put("ext_pass_box_code", passBox.getString("passBoxCode"))//周转箱编码
 
-
-            objCT1112.put("ext_end_point", getWarehouse2ByLocation(warehouseCategoryCode,warehouseCode))//滚筒线目标位置
+            def endPoint= getWarehouse2ByLocation(warehouseCategoryCode,warehouseCode).toString()
+            objCT1112.put("ext_end_point", endPoint)//滚筒线目标位置 -自定义字段
+            objCT1112.put("targetLocationCode", endPoint)//目标位置编码
+            objCT1112.put("targetLocationName", basicGroovyService.getByCode("location", endPoint).getString("name"))//目标位置名称
             objCT1112.put("ext_in_out_type", "in")//出入类型
             objCT1112.put("ext_sheet_code", warehouseInSheet.getString("code"))//任务单编码
             objCT1112.put("ext_inventory_workbench_code", "")//工作台编码, 仅出库时有效,用于记录几号滚筒线
