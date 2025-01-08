@@ -135,7 +135,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             //BmfObject单位取值报错，java.lang.ClassCastException: java.lang.String cannot be cast to com.chinajay.virgo.bmf.obj.BmfObject
             warehouseInSheetpassBox.put("unit", basicGroovyService.getByCode("material", passBox.getString("materialCode")).getAndRefreshBmfObject("flowUnit"))
             warehouseInSheetpassBox.put("passBoxRealCode", passBox.getString("passBoxRealCode"))
-
+            warehouseInSheetpassBox.put("completionStatus",false)
             warehouseInSheetpassBoxes.add(warehouseInSheetpassBox)
             // warehouseInSheetpassBoxes.add(passBox)
         })

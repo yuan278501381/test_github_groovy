@@ -151,6 +151,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
                     warehouseInSheetPassBox.put("passBoxCode", passBox.getString("passBoxCode"))//周转箱编码
                     warehouseInSheetPassBox.put("unit", line.get("unit"))//单位
                     warehouseInSheetPassBox.put("passBoxRealCode", passBox.getString("code"))//周转箱实时编码
+                    warehouseInSheetPassBox.put("completionStatus",false)
                     warehouseInSheetPassBoxs.add(warehouseInSheetPassBox)
                 }
             }
