@@ -88,14 +88,14 @@ class NodeGN0001Submit extends NodeGroovyClass {
             passBoxc.put("ext_batch_number",batchNumber)//批次编码
             ct1118.put("passBoxes", Collections.singletonList(passBoxc))//添加周转箱表
             //更新周转箱实时表的批次编码
-           BmfObject passBoxReal= basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
+            BmfObject passBoxReal= basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
             if (!passBoxReal){
                 throw new  BusinessException("周转箱实时信息不存在")
             }
             else {
                 passBoxReal.put("ext_batch_number",batchNumber)
-                 basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
-                 }
+                basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
+            }
             sceneGroovyService.buzSceneStart("CT1118",ct1118)
 
             //回入库申请单的状态为:Received-已收货
@@ -133,6 +133,8 @@ class NodeGN0001Submit extends NodeGroovyClass {
             ct1110.put("ext_passboxcode",passBox.getString("passBoxCode"))//周转箱代码
             ct1110.put("ext_passboxname",passBox.getString("passBoxName"))//周转箱名称
             ct1110.put("ext_quantity", passBox.getBigDecimal("quantity"))//装箱数量
+            ct1110.put("warehouseCode",item.getString("warehouseCode"))//仓库编码
+            ct1110.put("warehouseName",item.getString("warehouseName"))//仓库名称
             ct1110.put("ext_batch_number", batchNumber)//批次编码
             ct1110.put("ext_passbox_realcode",passBox.getString("code")) //周转箱实时表code
             def flowUnitname= basicGroovyService.getByCode ("material",passBox.getString("materialCode")).getAndRefreshBmfObject("flowUnit")
