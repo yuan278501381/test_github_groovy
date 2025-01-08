@@ -56,12 +56,20 @@ class NodeCT1124Submit extends NodeGroovyClass {
             //发起滚筒线搬运一个周转箱一个搬运任务
             createCT1112Task(nodeData, passBoxReal)
         }
-       // throw new BusinessException("ttttttttttt")
+        // throw new BusinessException("ttttttttttt")
         return nodeData
 
     }
 
     void createCT1112Task(BmfObject nodeData, BmfObject passBox) {
+
+        def isCTU= basicGroovyService.getByCode("warehouseCategory",
+                basicGroovyService.getByCode("warehouse", nodeData.getString("warehouseCode")).getString("categoryCode"))
+                .getString("name") contains("CTU")
+
+        if(!isCTU){
+            throw new BusinessException("仓库类别不是CTU仓库，不能执行CTU期初入库")
+        }
 
         //默认批次编码为：ZD
         String batchNumber = "ZD"
@@ -80,7 +88,7 @@ class NodeCT1124Submit extends NodeGroovyClass {
         object.put("ext_business_type_name","CTU期初入库")
         object.put("ext_in_out_type", "in")
         //业务来源
-       // object.put("ext_business_source", nodeData.getBmfClassName())
+        // object.put("ext_business_source", nodeData.getBmfClassName())
         def warehouseCode=nodeData.getString("warehouseCode")
         def warehouseCategoryCode=basicGroovyService.getByCode("warehouse", warehouseCode).getString("categoryCode")
         def location = getWarehouse2ByLocation(warehouseCategoryCode,warehouseCode).toString()
@@ -92,24 +100,24 @@ class NodeCT1124Submit extends NodeGroovyClass {
         //来源编码
         object.put("ext_business_source_code", nodeData.getPrimaryKeyValue())
 
-            BmfObject material = passBox.getAndRefreshBmfObject("material")
-            //物料编码
-            object.put("ext_material_code", material.getString("code"))
-            //物料名称
-            object.put("ext_material_name", material.getString("name"))
-            //周转箱编码
-            object.put("ext_pass_box_code", passBox.getString("passBoxCode"))
-            passBox = BmfUtils.genericFromJsonExt(passBox, "CT1112PassBoxes")
-            passBox.put("id", null)
-            passBox.put("submit", false)
-            passBox.put("quantityUnit", material.getAndRefreshBmfObject("flowUnit"))
-            object.put("passBoxes", Arrays.asList(passBox))
-            BmfObject task = new BmfObject("CT1112Tasks")
-            task.put("materialCode", material.getString("code"))
-            task.put("materialName", material.getString("name"))
-            task.put("material", material)
-            task.put("quantityUnit", material.getAndRefreshBmfObject("flowUnit"));
-            object.put("tasks", Arrays.asList(task))
+        BmfObject material = passBox.getAndRefreshBmfObject("material")
+        //物料编码
+        object.put("ext_material_code", material.getString("code"))
+        //物料名称
+        object.put("ext_material_name", material.getString("name"))
+        //周转箱编码
+        object.put("ext_pass_box_code", passBox.getString("passBoxCode"))
+        passBox = BmfUtils.genericFromJsonExt(passBox, "CT1112PassBoxes")
+        passBox.put("id", null)
+        passBox.put("submit", false)
+        passBox.put("quantityUnit", material.getAndRefreshBmfObject("flowUnit"))
+        object.put("passBoxes", Arrays.asList(passBox))
+        BmfObject task = new BmfObject("CT1112Tasks")
+        task.put("materialCode", material.getString("code"))
+        task.put("materialName", material.getString("name"))
+        task.put("material", material)
+        task.put("quantityUnit", material.getAndRefreshBmfObject("flowUnit"));
+        object.put("tasks", Arrays.asList(task))
 
         sceneGroovyService.buzSceneStart("CT1112", object)
 
