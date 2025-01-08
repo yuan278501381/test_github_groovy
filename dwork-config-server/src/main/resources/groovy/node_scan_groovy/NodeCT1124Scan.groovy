@@ -24,14 +24,19 @@ class NodeCT1124Scan extends NodeScanGroovyClass {
         def model = nodeData.getString("model")
         //扫描的编码
         def passBoxCode = nodeData.getString("code")
+        def objNode = nodeData.deepClone()
+        def tasklist = objNode.getList("tasks")
+        if (!tasklist &&  !nodeData.getString("code").contains("WL")) {
+            return result.fail("请先扫描或选择一个物料编码！")
+        }
+
         //如果扫描模块是物料关联虚拟周转箱，则进行判断。因为扫描物料编码也会进入周转箱模块，后面的getInteger取值会报错，所以这里排除掉，
         if (model.contains("PassBox") &&  !passBoxCode.contains("WL")) {
             /*
             virtualPassBox-虚拟周转箱控件
             materialRelevancePassBox-物料关联周转箱
              */
-            def objNode = nodeData.deepClone()
-            def tasklist = objNode.getList("tasks")
+
             if (tasklist.size()>=2) {
                 return result.fail("立库期初盘点功能仅允许一个物料！")
             }
