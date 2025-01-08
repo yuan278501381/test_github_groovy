@@ -9,7 +9,7 @@ import com.tengnat.dwork.modules.script.service.BasicGroovyService
 /**
  * @author 袁英杰
  * @Create 2025-01-07
- * @Dscription 扫描周转箱时自动按界面上的数量，为周转箱数量赋值
+ * @Dscription CTU库期初盘点-PDA 扫描周转箱时自动按界面上的数量，为周转箱数量赋值
  * */
 class NodeCT1124Scan extends NodeScanGroovyClass {
 
@@ -31,6 +31,14 @@ class NodeCT1124Scan extends NodeScanGroovyClass {
             materialRelevancePassBox-物料关联周转箱
              */
             def objNode = nodeData.deepClone()
+            def tasklist = objNode.getList("tasks")
+            if (tasklist.size()>=2) {
+                return result.fail("立库期初盘点功能仅允许一个物料！")
+            }
+            //def taskSelect=tasklist.findAll { it -> it.getBoolean("judgeSelect")}.get(0)
+
+            def material= basicGroovyService.getByCode("material",tasklist.get(0).getString("materialCode"))
+
             def suggestedQuantity = nodeData.getBigDecimal("ext_quantity")?: BigDecimal.ZERO //取得PDA界面上的数量
             def batchNumber = nodeData.getString("ext_batch_number")//取得PDA界面上的批次号
 
@@ -39,20 +47,18 @@ class NodeCT1124Scan extends NodeScanGroovyClass {
             //new一个JSONObject,然后为新增周转箱字段赋值
             def objPassBox = basicGroovyService.getByCode("passBox", passBoxCode)
             def passBoxJson = new JSONObject()
+//立库期初盘点界面上已经选择了一个物料编码，因此这里不在需要写tasks
+//            def tasksJson=new JSONObject()
+//            tasksJson.put("materialCode",material.getString("code") )
+//            tasksJson.put("materialName",material.getString("name"))
+//            tasksJson.put("materialId", material.getInteger("id"))
+//            resultData.put("tasks", Collections.singletonList(tasksJson))
             passBoxJson.put("virtualPassBox", false)
             passBoxJson.put("boxSelect",true)
-//            passBoxJson.put("materialCode", material.getString("code"))
-//            passBoxJson.put("materialName", material.getString("name"))
-//            passBoxJson.put("material", material.getInteger("id"))//物料主数据id
-//            passBoxJson.put("quantityUnit", material.getAndRefreshBmfObject("flowUnit"))//流转单位
-            def tasksJson=new JSONObject()
-            tasksJson.put("materialCode","WL10003" )
-            tasksJson.put("materialName","xfj原材料")
-            resultData.put("tasks", Collections.singletonList(tasksJson))
-
-            passBoxJson.put("materialCode", "WL10003")
-            passBoxJson.put("materialName", "xfj原材料")
-            passBoxJson.put("material", 3)//物料主数据id
+            passBoxJson.put("materialCode", material.getString("code"))
+            passBoxJson.put("materialName", material.getString("name"))
+            passBoxJson.put("material", material.getInteger("id"))//物料主数据id
+            passBoxJson.put("quantityUnit", material.getAndRefreshBmfObject("flowUnit"))//流转单位
             passBoxJson.put("passBox", objPassBox.getInteger("id"))//passBox主数据的id
             passBoxJson.put("passBoxCode", objPassBox.getString("code"))
             passBoxJson.put("passBoxName", objPassBox.getString("name"))
