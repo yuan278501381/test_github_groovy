@@ -62,7 +62,13 @@ class warehouseInApplicationIssued extends AopAfterGroovyClass {
                             "where t.code='" + detail.getString("materialCode") + "'" +
                             "Limit 1"
                     def SQLResult = basicGroovyService.findOne(getmaterialExtSQL)
-                    detail.put("packetChange", SQLResult.get("ext_packet_change"))
+                    def packetChange = false
+                    if (!SQLResult) {
+                        packetChange = false
+                    } else {
+                        packetChange = SQLResult.get("ext_packet_change")
+                    }
+                    detail.put("packetChange", packetChange)
                     //将
                     warehouseInApplication.put("main_idAutoMapping", Collections.singletonList(detail))
                     sceneGroovyService.restfulCodeStart(restfulCode, warehouseInApplication)
@@ -90,8 +96,10 @@ class warehouseInApplicationIssued extends AopAfterGroovyClass {
 
                     BmfObject objCT1118 = new BmfObject("CT1118")
                     objCT1118.put("ext_warehouse_in_application_id", warehouseInApplication.getString("id"))
-                    objCT1118.put("ext_warehouse_In_application_code", warehouseInApplication.getString("code")) //入库申请单编码
-                    objCT1118.put("ext_warehouse_in_type", warehouseInApplication.getString("warehouseInType"))  //入库类型 生产完工；采购入库等
+                    objCT1118.put("ext_warehouse_In_application_code", warehouseInApplication.getString("code"))
+                    //入库申请单编码
+                    objCT1118.put("ext_warehouse_in_type", warehouseInApplication.getString("warehouseInType"))
+                    //入库类型 生产完工；采购入库等
                     objCT1118.put("ext_material_code", detailList.get(0).getString("materialCode"))//物料编码
                     objCT1118.put("ext_material_name", detailList.get(0).getString("materialName"))//物料描述
                     objCT1118.put("ext_quantity", totalQuantity)//入库数量
@@ -104,7 +112,7 @@ class warehouseInApplicationIssued extends AopAfterGroovyClass {
                     //为task表的物料描述赋值
                     objTask.put("materialName", detailList.get(0).getString("materialName"))
 
-                    objTask.put("quantityUnit", basicGroovyService.getByCode ("material",detailList.get(0).getString("materialCode")).getAndRefreshBmfObject("flowUnit"))
+                    objTask.put("quantityUnit", basicGroovyService.getByCode("material", detailList.get(0).getString("materialCode")).getAndRefreshBmfObject("flowUnit"))
                     tasks.add(objTask)
                     objCT1118.put("tasks", tasks)
                     sceneGroovyService.buzSceneStart("CT1118", objCT1118)
