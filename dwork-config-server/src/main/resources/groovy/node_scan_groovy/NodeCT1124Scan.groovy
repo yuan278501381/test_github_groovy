@@ -59,6 +59,8 @@ class NodeCT1124Scan extends NodeScanGroovyClass {
             passBoxJson.put("materialName", material.getString("name"))
             passBoxJson.put("material", material.getInteger("id"))//物料主数据id
             passBoxJson.put("quantityUnit", material.getAndRefreshBmfObject("flowUnit"))//流转单位
+            passBoxJson.put("warehouseCode", nodeData.getString("warehouseCode"))//仓库编码
+            passBoxJson.put("warehouseName", nodeData.getString("warehouseName"))//仓库名称
             passBoxJson.put("passBox", objPassBox.getInteger("id"))//passBox主数据的id
             passBoxJson.put("passBoxCode", objPassBox.getString("code"))
             passBoxJson.put("passBoxName", objPassBox.getString("name"))
