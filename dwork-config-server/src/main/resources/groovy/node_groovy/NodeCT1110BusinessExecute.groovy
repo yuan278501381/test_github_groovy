@@ -43,7 +43,9 @@ class NodeCT1110BusinessExecute extends  NodeGroovyClass {
 
 
     }
-    //创建入库待确认任务
+    //创建入库待确认任务   不直接按翻包界面创建CTU 、平面库任务的原因是:
+    //供应商送货到仓库的货太多，仓管翻包后可能将实物临时放在平面库、CTU库这二者以外的一个临时位置
+    //
     private void createCt1118(BmfObject nodeData, BmfObject item) {
 
         String batchNumber="ZD"
