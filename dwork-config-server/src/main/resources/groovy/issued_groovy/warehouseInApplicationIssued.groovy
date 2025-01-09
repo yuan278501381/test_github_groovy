@@ -36,8 +36,9 @@ class warehouseInApplicationIssued extends AopAfterGroovyClass {
             if (!"notReceive".equals(status)) {
                 throw new BusinessException("入库申请单状态不是待收货，无法下达")
             }
-            //判断入库类型，如果入库类型是采购收货，则调用warehouseInApplicationIssued2-生成采购收货任务/委外收货任务的 规则项,否则是普通规则
-            if (warehouseInApplication.getString("warehouseInType") == "purchaseDeliver" || warehouseInApplication.getString("warehouseInType") == "purchaseDeliverExt") {
+            //判断入库类型，如果入库类型是采购收货，则调用warehouseInApplicationIssued2-生成采购收货任务/委外收货任务的/分销采购入库 规则项,否则是普通规则
+            if (warehouseInApplication.getString("warehouseInType") == "purchaseDeliver" || warehouseInApplication.getString("warehouseInType") == "purchaseDeliverExt"
+                    || warehouseInApplication.getString("warehouseInType") == "purchaseDeliverFx") {
                 restfulCode = "warehouseInApplicationIssued2"
 
                 //深拷贝一份，防止修改循环外的数据源
@@ -76,7 +77,6 @@ class warehouseInApplicationIssued extends AopAfterGroovyClass {
             }
             //如果不为采购收货则创建入库待确认任务-PDA
             else {
-
 
                 //深拷贝一份，防止修改循环外的数据源
                 warehouseInApplication = warehouseInApplication.deepClone()
