@@ -223,6 +223,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
                 throw new BusinessException("周转箱实时信息不存在")
             } else {
                 passBoxReal.put("ext_batch_number", batchNumber)
+                passBoxReal.put("ext_prdLine", nodeData.getString("ext_prdLine"))
                 basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
             }
         }
@@ -338,6 +339,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
                 throw new BusinessException("周转箱实时信息不存在")
             } else {
                 passBoxReal.put("ext_batch_number", batchNumber)
+                passBoxReal.put("ext_prdLine", nodeData.getString("ext_prdLine"))
                 basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
             }6
 
