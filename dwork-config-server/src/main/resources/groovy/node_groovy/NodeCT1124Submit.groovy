@@ -11,9 +11,7 @@ import com.chinajay.virgo.utils.BmfUtils
 import com.chinajay.virgo.utils.SpringUtils
 import com.chinajey.application.common.exception.BusinessException
 import com.tengnat.dwork.common.enums.EquipSourceEnum
-import com.tengnat.dwork.modules.basic_data.domain.DomainBindResource
 import com.tengnat.dwork.modules.basic_data.service.ResourceBindingService
-import com.tengnat.dwork.modules.manufacturev2.domain.dto.ObjectResource
 import com.tengnat.dwork.modules.script.abstracts.NodeGroovyClass
 import com.tengnat.dwork.modules.script.service.BasicGroovyService
 import com.tengnat.dwork.modules.script.service.SceneGroovyService
@@ -78,6 +76,8 @@ class NodeCT1124Submit extends NodeGroovyClass {
         } else {
             batchNumber = nodeData.get("ext_batch_number")
         }
+
+
         BmfObject object = new BmfObject("CT1112")
         //来源
         object.put("dataSourceCode", nodeData.getPrimaryKeyValue())
@@ -121,12 +121,13 @@ class NodeCT1124Submit extends NodeGroovyClass {
 
         sceneGroovyService.buzSceneStart("CT1112", object)
 
-        //为周转箱实时表的批次字段赋值
+        //为周转箱实时表的批次、产品线字段赋值
         BmfObject passBoxReal = basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
         if (!passBoxReal) {
             throw new BusinessException("周转箱实时信息不存在")
         } else {
             passBoxReal.put("ext_batch_number", batchNumber)
+            passBoxReal.put("ext_prdLine", nodeData.getString("ext_prdLine"))
             basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
         }
     }
