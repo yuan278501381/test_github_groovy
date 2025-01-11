@@ -49,6 +49,13 @@ class NodeGN0001Submit extends NodeGroovyClass {
             else {
                 createCt1118(nodeData, item)
             }
+
+            /**
+             * 生成新任务
+             *
+             */
+            //3、未完成的生成新任务
+            createNewTask(item)
         })
         return nodeData
 
@@ -70,6 +77,7 @@ class NodeGN0001Submit extends NodeGroovyClass {
             ct1118.put("ext_material_name", passBox.getString("materialName"))//物料描述
             ct1118.put("ext_quantity", passBox.getBigDecimal("quantity"))//入库数量
             ct1118.put("ext_batch_number",batchNumber)//批次编码
+            ct1118.put("ext_prdLine", item.getString("ext_prdLine"))//产品线
 
             //组装移动应用的任务表
             List<BmfObject> tasks = new ArrayList<>()
@@ -94,6 +102,7 @@ class NodeGN0001Submit extends NodeGroovyClass {
             }
             else {
                 passBoxReal.put("ext_batch_number",batchNumber)
+                passBoxReal.put("ext_prdLine", item.getString("ext_prdLine"))
                 basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
             }
             sceneGroovyService.buzSceneStart("CT1118",ct1118)
@@ -139,6 +148,7 @@ class NodeGN0001Submit extends NodeGroovyClass {
             ct1110.put("ext_passbox_realcode",passBox.getString("code")) //周转箱实时表code
             def flowUnitname= basicGroovyService.getByCode ("material",passBox.getString("materialCode")).getAndRefreshBmfObject("flowUnit")
             ct1110.put("ext_Unit", flowUnitname.getString("name"))//翻包主表单位
+            ct1110.put("ext_prdLine", item.getString("ext_prdLine"))//产品线
 
 
             //组装移动应用的任务表
@@ -157,6 +167,7 @@ class NodeGN0001Submit extends NodeGroovyClass {
             }
             else {
                 passBoxReal.put("ext_batch_number",batchNumber)
+                passBoxReal.put("ext_prdLine", item.getString("ext_prdLine"))
                 basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
             }
             //组装移动应用的周转箱表,
@@ -180,6 +191,26 @@ class NodeGN0001Submit extends NodeGroovyClass {
 
     }
 
+    /**
+     * 生成新任务
+     * @param passBoxes 周转箱集合
+     */
+    private void createNewTask(BmfObject nodeData) {
+        //本次发货数量
+        BigDecimal quantity = nodeData.getList("passBoxes").stream().map(passBox -> passBox.getBigDecimal("quantity")).reduce(BigDecimal.ZERO, BigDecimal::add)
+        //待发货数量
+        BigDecimal totalQuantity = nodeData.getBigDecimal("ext_wait_received_quantity")//界面上的待收货，不可编辑
+
+        //未完成生成新任务
+        if (totalQuantity > quantity) {
+            //待发货数量大于本次发货数量
+            BmfObject clone = nodeData.deepClone()
+            clone = BmfUtils.genericFromJsonExt(clone, clone.getBmfClassName())
+            clone.put("ext_wait_received_quantity", totalQuantity.subtract(quantity))//新任务的待收货数量
+            clone.put("ext_current_received_quantity", totalQuantity.subtract(quantity))//新任务的本次收货数量（默认值，可修改））
+            sceneGroovyService.saveBySelf(clone)
+        }
+    }
     private void GN0001Validate(BmfObject nodeData, BmfObject item) {
 
         BigDecimal ext_quantity=item.getBigDecimal("ext_current_received_quantity")
@@ -196,7 +227,7 @@ class NodeGN0001Submit extends NodeGroovyClass {
             }
         }).map(passBox -> passBox.getBigDecimal("receiveQuantity") == null ? BigDecimal.ZERO : passBox.getBigDecimal("receiveQuantity"))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
-        if (ext_quantity != sum) {
+        if (ext_quantity < sum) {
             throw new BusinessException("周转箱总数量必须等于本次收货数量")
         }
     }
