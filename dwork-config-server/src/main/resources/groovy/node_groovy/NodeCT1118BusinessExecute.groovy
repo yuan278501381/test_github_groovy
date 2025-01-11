@@ -73,7 +73,8 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             } else {
                 throw new BusinessException("仓库类别名称识别失败,不包含平面仓、CTU仓中二者中的一种，未识别的业务逻辑！")
             }
-
+            //校验周转箱必填、物料正确性、数量必填
+            CT1118Validate ( nodeData, item)
             //按累计确认数量，改写入库确认单的状态，考虑部分确认后，任务要留在界面上，供下一次入库。
             //updateCT1118logisticsStatus(nodeData, item)
         })
@@ -115,7 +116,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
         //组装周转箱表
         List<BmfObject> warehouseInSheetpassBoxes = new ArrayList<>()
 
-        List<BmfObject> passBoxes = nodeData.getList("passBoxes")
+        List<BmfObject> passBoxes = item.getList("passBoxes")
 //            if (CollectionUtil.isEmpty(passBoxes)) {
 //                throw new BusinessException("周转箱数据不能为空")
 //            }
@@ -326,6 +327,33 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             sceneGroovyService.buzSceneStart("CT1112", objCT1112);
 
         })
+
+    }
+    private void CT1118Validate(BmfObject nodeData, BmfObject item) {
+
+        BigDecimal ext_quantity=item.getBigDecimal("ext_quantity")
+
+        List<BmfObject> passBoxes = item.getList("passBoxes")
+        if(!passBoxes){
+            throw new BusinessException("周转箱必须填写，请检查后重试！")
+        }
+        BigDecimal sum = passBoxes.stream().peek(passBox -> {
+            BmfObject passBoxReal = basicGroovyService.findOne("passBoxReal", "passBoxCode", passBox.getString("passBoxCode"))
+            if (!passBoxReal) {
+                throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]实时信息不存在或生成失败")
+
+            }
+            if(passBoxReal.getString("materialCode")!=(item.getString("ext_material_code"))){
+                throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]物料不在任务中，请检查后重试！")
+            }
+            if(passBoxReal.getBigDecimal("quantity")<=BigDecimal.ZERO){
+                throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]物料数量必须填写，请检查后重试！")
+            }
+        }).map(passBox -> passBox.getBigDecimal("receiveQuantity") == null ? BigDecimal.ZERO : passBox.getBigDecimal("receiveQuantity"))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+//        if (ext_quantity < sum) {
+//            throw new BusinessException("周转箱总数量不能超过本次收货数量")
+//        }
 
     }
 
