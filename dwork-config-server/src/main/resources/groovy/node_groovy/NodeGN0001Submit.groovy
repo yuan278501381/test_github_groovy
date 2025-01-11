@@ -228,7 +228,7 @@ class NodeGN0001Submit extends NodeGroovyClass {
         }).map(passBox -> passBox.getBigDecimal("receiveQuantity") == null ? BigDecimal.ZERO : passBox.getBigDecimal("receiveQuantity"))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
         if (ext_quantity < sum) {
-            throw new BusinessException("周转箱总数量必须等于本次收货数量")
+            throw new BusinessException("周转箱总数量不能超过本次收货数量")
         }
     }
 }
