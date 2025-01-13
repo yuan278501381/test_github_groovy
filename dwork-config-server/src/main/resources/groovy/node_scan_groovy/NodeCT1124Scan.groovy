@@ -29,6 +29,25 @@ class NodeCT1124Scan extends NodeScanGroovyClass {
         if (!tasklist &&  !nodeData.getString("code").contains("WL")) {
             return result.fail("请先扫描或选择一个物料编码！")
         }
+        //同一个周转箱不能出现在两个未清任务中，如果有则报错！
+        if(passBoxCode.startsWith("99")){
+            String sSQL="select distinct  pass_box_code    from (select t1.pass_box_code\n"
+                    sSQL+= " from dwk_logistics_custom_ct1112 t\n #未清滚筒线任务 \n"
+                    sSQL+=" inner join dwork_cs.dwk_logistics_custom_ct1112_passboxes t1 on t.id = t1.main_id\n"
+                    sSQL+="  where t.logistics_status <= 2\n"
+                    sSQL+="  union all\n"
+                    sSQL+="  select t1.pass_box_code\n #未清CTU搬运任务 \n"
+                    sSQL+="  from dwk_logistics_custom_ct1111 t\n"
+                    sSQL+="  inner join dwork_cs.dwk_logistics_custom_ct1111_passboxes t1 on t.id = t1.main_id\n"
+                    sSQL+="  where t.logistics_status <= 2)t\n"
+                    sSQL+="where t.pass_box_code='"+passBoxCode +"' Limit 1"
+
+            def sqlResult=basicGroovyService.findOne(sSQL)
+            if(!(!sqlResult)){
+                return result.fail("同一个周转箱编码不能出现在两个未清任务中，请检查后重试！")
+            }
+
+        }
 
         //如果扫描模块是物料关联虚拟周转箱，则进行判断。因为扫描物料编码也会进入周转箱模块，后面的getInteger取值会报错，所以这里排除掉，
         if (model.contains("PassBox") &&  !passBoxCode.contains("WL")) {
