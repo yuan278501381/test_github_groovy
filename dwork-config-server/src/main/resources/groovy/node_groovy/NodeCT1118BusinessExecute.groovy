@@ -1,6 +1,6 @@
 package groovy.node_groovy
 
-
+import com.alibaba.fastjson.JSONObject
 import com.chinajay.virgo.bmf.obj.BmfObject
 import com.chinajay.virgo.bmf.service.BmfService
 import com.chinajay.virgo.utils.BmfUtils
@@ -49,38 +49,43 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             if (!item.getString("ext_warehouse_In_application_code")) {
                 throw new BusinessException("入库申请单编码不能为空")
             }
-            //1、创建入库任务单-PC
-            BmfObject warehouseInSheet = createWarehouseInTask(nodeData, item)
 
-            //2、根据仓库类别名称判断，创建平面仓库入库任务-PDA和CTU仓入库任务-PDA中的一种
-            if (basicGroovyService.getByCode("warehouseCategory",
-                    basicGroovyService.getByCode("warehouse", item.getString("warehouseCode")).getString("categoryCode"))
-                    .getString("name") contains("平面")) {
+            def warehouseCategoryCode = basicGroovyService.getByCode("warehouse", item.getString("warehouseCode")).getString("categoryCode")
+            def wareHouseType = basicGroovyService.getByCode("warehouseCategory", warehouseCategoryCode).getString("name")
+
+            if (wareHouseType.contains("平面")) {
+
+                BmfObject warehouseInSheet = createWarehouseInTask(nodeData, item) //1.1 创建入库任务单-PC
 
                 log.info("==============按仓库类别名称识别为平面库，进入平面库业务逻辑==============")
-                createFlatTask(nodeData, item)
 
+                createFlatTask(nodeData, item)   //1.2 创建平面库任务-PDA
+                createNewTask(item)//1.3 未完成的数量生成新任务
             }
             //3、根据仓库名称判断，创建智能设备搬运任务-PDA CT1111
-            else if (basicGroovyService.getByCode("warehouseCategory",
-                    basicGroovyService.getByCode("warehouse", item.getString("warehouseCode")).getString("categoryCode"))
-                    .getString("name") contains("CTU")) {
-                log.info("==============按仓库类别名称识别为CTU库，进入CTU库业务逻辑==============")
-                createIntelligenthandlingTask(nodeData, item, warehouseInSheet)
-            } else {
-                throw new BusinessException("仓库类别名称识别失败,不包含平面仓、CTU仓中二者中的一种，未识别的业务逻辑！")
-            }
-            //校验周转箱必填、物料正确性、数量必填
-            CT1118Validate (nodeData, item)
+            else if (wareHouseType.contains("CTU")) {
+                BmfObject warehouseInSheet = createWarehouseInTask(nodeData, item) //2.1 创建入库任务单-PC
 
-            //4、未完成的数量生成新任务
-            createNewTask(item)
+                log.info("==============按仓库类别名称识别为CTU库，进入CTU库业务逻辑==============")
+
+                createIntelligenthandlingTask(nodeData, item, warehouseInSheet) //2.2 创建滚筒线搬运任务
+                createNewTask(item)//2.3 未完成的数量生成新任务
+            } else if (wareHouseType.contains("地面")) {
+
+                log.info("==============按仓库类别名称识别为地面库，进入地面库业务逻辑==============")
+                createWarehouse3Task(nodeData, item) //3 创建地面库任务-PDA
+                //createNewTask(item) 测试用
+            } else {
+                throw new BusinessException("业务逻辑识别失败,不包含平面仓、CTU仓、地面仓中三者中的一种，未识别的业务！$wareHouseType")
+            }
+
+            ct1118Validate(nodeData, item, wareHouseType)//4 校验周转箱必填、物料正确性、数量必填（周转箱实时）
+
 
             //按累计确认数量，改写入库确认单的状态，考虑部分确认后，任务要留在界面上，供下一次入库。
             //updateCT1118logisticsStatus(nodeData, item)
         })
         throw new ScriptInterruptedException("不流转")
-
     }
 
     private BmfObject createWarehouseInTask(BmfObject nodeData, BmfObject item) {
@@ -128,7 +133,6 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             warehouseInSheetpassBox.put("passBoxCode", passBox.getString("passBoxCode"))
             warehouseInSheetpassBox.put("passBoxName", passBox.getString("passBoxName"))
             warehouseInSheetpassBox.put("quantity", passBox.getBigDecimal("quantity"))
-            //BmfObject单位取值报错，java.lang.ClassCastException: java.lang.String cannot be cast to com.chinajay.virgo.bmf.obj.BmfObject
             warehouseInSheetpassBox.put("unit", basicGroovyService.getByCode("material", passBox.getString("materialCode")).getAndRefreshBmfObject("flowUnit"))
             warehouseInSheetpassBox.put("passBoxRealCode", passBox.getString("passBoxRealCode"))
             warehouseInSheetpassBox.put("completionStatus", false)
@@ -222,8 +226,8 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             } else {
                 passBoxReal.put("ext_batch_number", batchNumber)
 
-                if (!(item.getString("ext_warehouse_in_type")=="purchaseDeliver" ||item.getString("ext_warehouse_in_type")=="purchaseDeliverExt" ||
-                        item.getString("ext_warehouse_in_type")=="purchaseDeliverFx"))
+                if (!(item.getString("ext_warehouse_in_type") == "purchaseDeliver" || item.getString("ext_warehouse_in_type") == "purchaseDeliverExt" ||
+                        item.getString("ext_warehouse_in_type") == "purchaseDeliverFx"))
 
                 {
                     passBoxReal.put("ext_prdLine", item.getString("ext_prdLine"))
@@ -316,8 +320,8 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
                 throw new BusinessException("周转箱实时信息不存在")
             } else {
                 passBoxReal.put("ext_batch_number", batchNumber)
-                if (!(item.getString("ext_warehouse_in_type")=="purchaseDeliver" ||item.getString("ext_warehouse_in_type")=="purchaseDeliverExt" ||
-                        item.getString("ext_warehouse_in_type")=="purchaseDeliverFx"))
+                if (!(item.getString("ext_warehouse_in_type") == "purchaseDeliver" || item.getString("ext_warehouse_in_type") == "purchaseDeliverExt" ||
+                        item.getString("ext_warehouse_in_type") == "purchaseDeliverFx"))
 
                 {
                     passBoxReal.put("ext_prdLine", item.getString("ext_prdLine"))
@@ -330,38 +334,102 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
         })
 
     }
-    private void CT1118Validate(BmfObject nodeData, BmfObject item) {
 
-        BigDecimal ext_quantity=item.getBigDecimal("ext_quantity")
+    private void createWarehouse3Task(BmfObject nodeData, BmfObject item) {
+
+        /*
+      **  5、创建地面库任务 CT1129,CU0018
+       */
+        //默认批次编码为：ZD
+        String batchNumber = "ZD"
+        if (!item.get("ext_batch_number")) {
+            batchNumber = "ZD"
+        } else {
+            batchNumber = item.get("ext_batch_number")
+        }
+
+        BmfObject objCT1129 = new BmfObject("CT1129")
+
+
+        objCT1129.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))//入库申请单号
+        objCT1129.put("ext_target_warehouse_code", item.getString("warehouseCode"))//目标仓库编码
+        objCT1129.put("ext_target_warehouse_name", item.getString("warehouseName"))//目标仓库名称
+        objCT1129.put("ext_warehouse_in_type", item.getString("ext_warehouse_in_type"))//入库类型
+        objCT1129.put("ext_material_code", item.getString("ext_material_code"))//物料编码
+        objCT1129.put("ext_material_name", item.getString("ext_material_name"))//物料描述
+        objCT1129.put("ext_batch_number", batchNumber)//批次编码
+        objCT1129.put("warehouseCode", item.getString("warehouseCode"))//仓库编码
+        objCT1129.put("warehouseName", item.getString("warehouseName"))//仓库名称
+        objCT1129.put("ext_quantity", item.getBigDecimal("ext_quantity"))//数量
+        objCT1129.put("ext_prdLine", item.getString("ext_prdLine"))//产品线
+
+        List<BmfObject> tasks = new ArrayList<>()
+        BmfObject objTask = new BmfObject("CT1129Tasks")
+
+        def material = basicGroovyService.getByCode("material", item.getString("ext_material_code"))
+
+        //为task表的物理编码赋值
+        objTask.put("materialCode", item.getString("ext_material_code"))
+        //为task表的物料描述赋值
+        objTask.put("materialName", item.getString("ext_material_name"))
+        //为task表的物料单位赋值
+        objTask.put("quantityUnit", material.getAndRefreshBmfObject("flowUnit"))
+        tasks.add(objTask)
+        objCT1129.put("tasks", tasks)//添加任务表
+
+        sceneGroovyService.buzSceneStart("CT1129", objCT1129)
+
+
+        // log.info(JSONObject.toJSONString(objCT1119))
+    }
+
+    private void ct1118Validate(BmfObject nodeData, BmfObject item, String wareHouseType) {
+
+        BigDecimal ext_quantity = item.getBigDecimal("ext_quantity")
+        String warehouseCode = nodeData.getString("warehouseCode")
+        if (!warehouseCode) {
+            throw new BusinessException("仓库编码不能为空,请检查后重试！")
+        }
 
         List<BmfObject> passBoxes = item.getList("passBoxes")
-        if(!passBoxes){
-            throw new BusinessException("周转箱必须填写，请检查后重试！")
-        }
-        BigDecimal sum = passBoxes.stream().peek(passBox -> {
-            BmfObject passBoxReal = basicGroovyService.findOne("passBoxReal", "passBoxCode", passBox.getString("passBoxCode"))
-            if (passBoxReal == null) {
-                throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]实时信息不存在或生成失败")
+        if (wareHouseType.contains("平面") || wareHouseType.contains("CTU")) {
+            if (!passBoxes) {
+                throw new BusinessException(" 仓库类型为：平面仓、CTU仓 时周转箱必须填写，请检查后重试！")
             }
-        }).map(passBox -> passBox.getBigDecimal("quantity") == null ? BigDecimal.ZERO : passBox.getBigDecimal("quantity"))
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
 
-        passBoxes.forEach {passBox ->
-            BmfObject passBoxReal = basicGroovyService.findOne("passBoxReal", "passBoxCode", passBox.getString("passBoxCode"))
-            if (!passBoxReal) {
-                throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]实时信息不存在或生成失败")
+            BigDecimal sum = passBoxes.stream().peek(passBox -> {
+                BmfObject passBoxReal = basicGroovyService.findOne("passBoxReal", "passBoxCode", passBox.getString("passBoxCode"))
+                if (passBoxReal == null) {
+                    throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]实时信息不存在或生成失败")
+                }
+            }).map(passBox -> passBox.getBigDecimal("quantity") == null ? BigDecimal.ZERO : passBox.getBigDecimal("quantity"))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
 
+            passBoxes.forEach { passBox ->
+                BmfObject passBoxReal = basicGroovyService.findOne("passBoxReal", "passBoxCode", passBox.getString("passBoxCode"))
+                if (!passBoxReal) {
+                    throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]实时信息不存在或生成失败")
+
+                }
+                if (passBoxReal.getString("materialCode") != (item.getString("ext_material_code"))) {
+                    throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]物料不在任务中，请检查后重试！")
+                }
+                if (passBoxReal.getBigDecimal("quantity") <= BigDecimal.ZERO) {
+                    throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]物料数量必须填写，请检查后重试！")
+                }
             }
-            if(passBoxReal.getString("materialCode")!=(item.getString("ext_material_code"))){
-                throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]物料不在任务中，请检查后重试！")
+            if (ext_quantity < sum) {
+                throw new BusinessException("周转箱数量之和不能超过本次入库数量")
             }
-            if(passBoxReal.getBigDecimal("quantity")<=BigDecimal.ZERO){
-                throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]物料数量必须填写，请检查后重试！")
+
+        } else if (wareHouseType.contains("地面")) {
+            if (passBoxes) {
+                throw new BusinessException("仓库类型为：地面仓时周转箱必须不填写，请检查后重试！")
             }
+        }else {
+            throw new BusinessException("未识别的业务类型，请检查后重试! $wareHouseType")
         }
-        if (ext_quantity < sum) {
-            throw new BusinessException("周转箱数量之和不能超过本次入库数量")
-        }
+
 
     }
 
@@ -381,9 +449,9 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
         if (submittedQuantity.add(oldqty) > BigDecimal.ZERO) {
             BmfObject updateNodeData = new BmfObject(item.getBmfClassName())
             updateNodeData.put("id", item.getPrimaryKeyValue())
-            if (submittedQuantity.add(oldqty)  == BigDecimal.ZERO) {
+            if (submittedQuantity.add(oldqty) == BigDecimal.ZERO) {
                 logisticsStatus = "1"
-            } else if (submittedQuantity.add(oldqty)  < item.getBigDecimal("ext_quantity") && submittedQuantity.add(oldqty)  > BigDecimal.ZERO) {
+            } else if (submittedQuantity.add(oldqty) < item.getBigDecimal("ext_quantity") && submittedQuantity.add(oldqty) > BigDecimal.ZERO) {
                 logisticsStatus = "2"
             } else {
                 logisticsStatus = "3"
@@ -414,6 +482,7 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             sceneGroovyService.saveBySelf(clone)
         }
     }
+
     def getWarehouse2ByLocation(String warehouseCategoryCode, String warehouseCode) {
         //传入仓库类别编码和仓库编码，优先返回该仓库编码背后关联库位上的第一个最小（按库位编码排序）空位置，如果前述逻辑返回空值，那么从该仓库类别下返回第一个最小空位置。
         // 示例：  call proc_getWarehouseLocationIn ('CB1002','CK0007') 返回值：WZ00012
