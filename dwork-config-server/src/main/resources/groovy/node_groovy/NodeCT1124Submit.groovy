@@ -49,6 +49,7 @@ class NodeCT1124Submit extends NodeGroovyClass {
             BmfObject passBox = collect.get(passBoxReal.getString("code"))
             passBoxReal.put("quantity", passBox.get("receiveQuantity"))
             passBoxReal.put("ext_batch_number", nodeData.get("ext_batch_number"))
+            passBoxReal.put("ext_prdLine", nodeData.getString("ext_prdLine"))
 
             sceneGroovyService.batchSynchronizePassBoxInfo(passBoxReals, EquipSourceEnum.PDA.getCode(), nodeData.getBmfClassName())
             //发起滚筒线搬运一个周转箱一个搬运任务
@@ -76,6 +77,8 @@ class NodeCT1124Submit extends NodeGroovyClass {
         } else {
             batchNumber = nodeData.get("ext_batch_number")
         }
+
+
 
 
         BmfObject object = new BmfObject("CT1112")
@@ -127,7 +130,7 @@ class NodeCT1124Submit extends NodeGroovyClass {
             throw new BusinessException("周转箱实时信息不存在")
         } else {
             passBoxReal.put("ext_batch_number", batchNumber)
-            passBoxReal.put("ext_prdLine", nodeData.getString("ext_prdLine"))
+            //passBoxReal.put("ext_prdLine", nodeData.getString("ext_prdLine"))
             basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
         }
     }

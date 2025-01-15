@@ -43,7 +43,7 @@ class NodeCT1124Scan extends NodeScanGroovyClass {
                     sSQL+="where t.pass_box_code='"+passBoxCode +"' Limit 1"
 
             def sqlResult=basicGroovyService.findOne(sSQL)
-            if(!(!sqlResult)){
+            if(sqlResult){
                 return result.fail("同一个周转箱编码不能出现在两个未清任务中，请检查后重试！")
             }
 

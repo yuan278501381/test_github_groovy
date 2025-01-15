@@ -215,7 +215,7 @@ class NodeGN0001Submit extends NodeGroovyClass {
 
         BigDecimal ext_quantity=item.getBigDecimal("ext_current_received_quantity")
 
-        List<BmfObject> passBoxes = nodeData.getList("passBoxes")
+        List<BmfObject> passBoxes = item.getList("passBoxes")
         BigDecimal sum = passBoxes.stream().peek(passBox -> {
             BmfObject passBoxReal = basicGroovyService.findOne("passBoxReal", "passBoxCode", passBox.getString("passBoxCode"))
             if (passBoxReal == null) {

@@ -1,16 +1,13 @@
 package groovy.node_groovy
 
-import cn.hutool.core.collection.CollectionUtil
-import com.alibaba.fastjson.JSONObject
+
 import com.chinajay.virgo.bmf.obj.BmfObject
 import com.chinajay.virgo.bmf.service.BmfService
 import com.chinajay.virgo.utils.BmfUtils
 import com.chinajay.virgo.utils.SpringUtils
 import com.chinajey.application.common.exception.BusinessException
 import com.chinajey.application.script.exception.ScriptInterruptedException
-import com.tengnat.dwork.modules.basic_data.domain.DomainBindResource
 import com.tengnat.dwork.modules.basic_data.service.ResourceBindingService
-import com.tengnat.dwork.modules.manufacturev2.domain.dto.ObjectResource
 import com.tengnat.dwork.modules.script.abstracts.NodeGroovyClass
 import com.tengnat.dwork.modules.script.service.BasicGroovyService
 import com.tengnat.dwork.modules.script.service.SceneGroovyService
@@ -74,7 +71,11 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
                 throw new BusinessException("仓库类别名称识别失败,不包含平面仓、CTU仓中二者中的一种，未识别的业务逻辑！")
             }
             //校验周转箱必填、物料正确性、数量必填
-            CT1118Validate ( nodeData, item)
+            CT1118Validate (nodeData, item)
+
+            //4、未完成的数量生成新任务
+            createNewTask(item)
+
             //按累计确认数量，改写入库确认单的状态，考虑部分确认后，任务要留在界面上，供下一次入库。
             //updateCT1118logisticsStatus(nodeData, item)
         })
@@ -339,6 +340,14 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
         }
         BigDecimal sum = passBoxes.stream().peek(passBox -> {
             BmfObject passBoxReal = basicGroovyService.findOne("passBoxReal", "passBoxCode", passBox.getString("passBoxCode"))
+            if (passBoxReal == null) {
+                throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]实时信息不存在或生成失败")
+            }
+        }).map(passBox -> passBox.getBigDecimal("quantity") == null ? BigDecimal.ZERO : passBox.getBigDecimal("quantity"))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+
+        passBoxes.forEach {passBox ->
+            BmfObject passBoxReal = basicGroovyService.findOne("passBoxReal", "passBoxCode", passBox.getString("passBoxCode"))
             if (!passBoxReal) {
                 throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]实时信息不存在或生成失败")
 
@@ -349,11 +358,10 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             if(passBoxReal.getBigDecimal("quantity")<=BigDecimal.ZERO){
                 throw new BusinessException("周转箱[" + passBox.getString("passBoxCode") + "]物料数量必须填写，请检查后重试！")
             }
-        }).map(passBox -> passBox.getBigDecimal("receiveQuantity") == null ? BigDecimal.ZERO : passBox.getBigDecimal("receiveQuantity"))
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-//        if (ext_quantity < sum) {
-//            throw new BusinessException("周转箱总数量不能超过本次收货数量")
-//        }
+        }
+        if (ext_quantity < sum) {
+            throw new BusinessException("周转箱数量之和不能超过本次入库数量")
+        }
 
     }
 
@@ -386,7 +394,26 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
         }
 
     }
+    /**
+     * 生成新任务
+     * @param passBoxes 周转箱集合
+     */
+    private void createNewTask(BmfObject item) {
+        //本次提交的周转箱数量之和
+        BigDecimal quantity = item.getList("passBoxes").stream().map(passBox -> passBox.getBigDecimal("quantity")).reduce(BigDecimal.ZERO, BigDecimal::add)
+        //待发货数量
+        BigDecimal totalQuantity = item.getBigDecimal("ext_quantity")//界面上的数量，不可编辑
 
+        //未完成生成新任务
+        if (totalQuantity > quantity) {
+            //计划数量大于本次周转箱数量之和时，生成新任务
+            BmfObject clone = item.deepClone()
+            clone = BmfUtils.genericFromJsonExt(clone, clone.getBmfClassName())
+            clone.put("ext_quantity", totalQuantity.subtract(quantity))//新任务的待收货数量
+            //clone.put("ext_current_received_quantity", totalQuantity.subtract(quantity))//新任务的本次收货数量（默认值，可修改））
+            sceneGroovyService.saveBySelf(clone)
+        }
+    }
     def getWarehouse2ByLocation(String warehouseCategoryCode, String warehouseCode) {
         //传入仓库类别编码和仓库编码，优先返回该仓库编码背后关联库位上的第一个最小（按库位编码排序）空位置，如果前述逻辑返回空值，那么从该仓库类别下返回第一个最小空位置。
         // 示例：  call proc_getWarehouseLocationIn ('CB1002','CK0007') 返回值：WZ00012
