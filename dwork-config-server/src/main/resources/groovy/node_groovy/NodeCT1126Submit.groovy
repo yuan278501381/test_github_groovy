@@ -186,12 +186,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
         **  3、创建 入库任务-平面库
         */
         //默认批次编码为：ZD
-        String batchNumber = "ZD"
-        if (!nodeData.get("ext_batch_number")) {
-            batchNumber = "ZD"
-        } else {
-            batchNumber = nodeData.get("ext_batch_number")
-        }
+        String batchNumber =nodeData.get("ext_batch_number")?:"ZD"
 
         BmfObject objCT1119 = new BmfObject("CT1119")
 
@@ -264,12 +259,7 @@ class NodeCT1126Submit extends NodeGroovyClass {
         */
 
         //默认批次编码为：ZD
-        String batchNumber = "ZD"
-        if (!nodeData.get("ext_batch_number")) {
-            batchNumber = "ZD"
-        } else {
-            batchNumber = nodeData.get("ext_batch_number")
-        }
+        String batchNumber =nodeData.get("ext_batch_number")?:"ZD"
 
         //组装周转箱表
         List<BmfObject> passBoxes2 = nodeData.getList("passBoxes")

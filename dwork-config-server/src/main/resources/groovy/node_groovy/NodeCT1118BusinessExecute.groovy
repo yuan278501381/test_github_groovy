@@ -1,6 +1,5 @@
 package groovy.node_groovy
 
-import com.alibaba.fastjson.JSONObject
 import com.chinajay.virgo.bmf.obj.BmfObject
 import com.chinajay.virgo.bmf.service.BmfService
 import com.chinajay.virgo.utils.BmfUtils
@@ -11,6 +10,7 @@ import com.tengnat.dwork.modules.basic_data.service.ResourceBindingService
 import com.tengnat.dwork.modules.script.abstracts.NodeGroovyClass
 import com.tengnat.dwork.modules.script.service.BasicGroovyService
 import com.tengnat.dwork.modules.script.service.SceneGroovyService
+import groovy.sql.Sql
 
 import java.util.stream.Collectors
 
@@ -159,23 +159,19 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
         **  3、创建 入库任务-平面库
         */
         //默认批次编码为：ZD
-        String batchNumber = "ZD"
-        if (!item.get("ext_batch_number")) {
-            batchNumber = "ZD"
-        } else {
-            batchNumber = item.get("ext_batch_number")
-        }
+        String batchNumber =item.get("ext_batch_number")?:"ZD"
 
         BmfObject objCT1119 = new BmfObject("CT1119")
 
-        //入库申请单号
-        objCT1119.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))
-        //目标仓库编码
-        objCT1119.put("ext_target_warehouse_code", item.getString("warehouseCode"))
-        //目标仓库名称
-        objCT1119.put("ext_target_warehouse_name", item.getString("warehouseName"))
-        //入库类型
-        objCT1119.put("ext_warehouse_in_type", item.getString("ext_warehouse_in_type"))
+
+        objCT1119.put("ext_source_order_type",item.getString("ext_source_order_type")) //来源单据类型-ERP
+        objCT1119.put("ext_source_order_code", item.getString("ext_source_order_code"))//来源单据编码-ERP
+        objCT1119.put("ext_warehouse_task_type2", item.getString("ext_warehouse_task_type2"))//仓库任务类型
+
+        objCT1119.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code")) //入库申请单号
+        objCT1119.put("ext_target_warehouse_code", item.getString("warehouseCode"))//目标仓库编码
+        objCT1119.put("ext_target_warehouse_name", item.getString("warehouseName"))//目标仓库名称
+        objCT1119.put("ext_warehouse_in_type", item.getString("ext_warehouse_in_type"))//入库类型
         objCT1119.put("warehouseCode", item.getString("warehouseCode"))
         objCT1119.put("warehouseName", item.getString("warehouseName"))
 
@@ -218,6 +214,8 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
         sceneGroovyService.buzSceneStart("CT1119", objCT1119)
 
         //为周转箱实时表的批次字段赋值
+
+
         def passBoxesc = item.getList("passBoxes")
         passBoxesc.forEach { passBox ->
             BmfObject passBoxReal = basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
@@ -247,12 +245,13 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
 
 
         //默认批次编码为：ZD
-        String batchNumber = "ZD"
-        if (!item.get("ext_batch_number")) {
-            batchNumber = "ZD"
-        } else {
-            batchNumber = item.get("ext_batch_number")
+        String batchNumber =item.get("ext_batch_number")?:"ZD"
+
+        def sql = Sql.newInstance("jdbc:mysql://localhost:3306/mydb", "user", "pass", "com.mysql.jdbc.Driver")
+        sql.eachRow("SELECT * FROM my_table where itemcode='323fda' and ") { row ->
+            println row.myField
         }
+
 
         //组装周转箱表
         List<BmfObject> passBoxes2 = item.getList("passBoxes")
@@ -266,6 +265,8 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             BmfObject objCT1112 = new BmfObject("CT1112")
 
             //按传入的入库申请单号，从入库申请单表头获得来源单号
+
+
             String sourceOrderCode = basicGroovyService.getByCode("WarehouseInApplication", item.getString("ext_warehouse_In_application_code")).getString("sourceOrderCode")
             //按传入的入库申请单号，从入库申请单表头获得入库类型
             String warehouseInType = basicGroovyService.getByCode("WarehouseInApplication", item.getString("ext_warehouse_In_application_code")).getString("warehouseInType")
@@ -276,12 +277,20 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
             def warehouseCategoryCode = basicGroovyService.getByCode("warehouse", warehouseCode).getString("categoryCode")
 
 
-            objCT1112.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))
-            //入库申请单号
+            objCT1112.put("ext_source_order_type",item.getString("ext_source_order_type")) //来源单据类型-ERP
+            objCT1112.put("ext_source_order_code", item.getString("ext_source_order_code"))//来源单据编码-ERP
+            objCT1112.put("ext_warehouse_task_type2", item.getString("ext_warehouse_task_type2"))//仓库任务类型
+
+            objCT1112.put("dataSourceType",item.getBmfClassName()) //来源单据类型-MES
+            objCT1112.put("dataSourceIdentifier", item.getInteger("id"))//来源单据编码-MES
+            objCT1112.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code")) //入库申请单号
             objCT1112.put("ext_business_type", warehouseInType)//业务类型 采购入库等
             objCT1112.put("ext_business_source", sourceOrderType)//业务来源 采购订单等
             objCT1112.put("ext_business_source_code", sourceOrderCode)//来源编码
             objCT1112.put("ext_pass_box_code", passBox.getString("passBoxCode"))//周转箱编码
+            objCT1112.put("ext_material_code", passBox.getString("materialCode"))
+            objCT1112.put("ext_material_name", passBox.getString("materialName"))
+            objCT1112.put("ext_specifications", basicGroovyService.getByCode("material", passBox.getString("materialCode")).getString("specifications"))
 
             def endPoint = getWarehouse2ByLocation(warehouseCategoryCode, warehouseCode).toString()
             objCT1112.put("ext_end_point", endPoint)//滚筒线目标位置 -自定义字段
@@ -341,16 +350,18 @@ class NodeCT1118BusinessExecute extends NodeGroovyClass {
       **  5、创建地面库任务 CT1129,CU0018
        */
         //默认批次编码为：ZD
-        String batchNumber = "ZD"
-        if (!item.get("ext_batch_number")) {
-            batchNumber = "ZD"
-        } else {
-            batchNumber = item.get("ext_batch_number")
-        }
+        String batchNumber =item.get("ext_batch_number")?:"ZD"
+
 
         BmfObject objCT1129 = new BmfObject("CT1129")
 
 
+        objCT1129.put("ext_source_order_type",item.getString("ext_source_order_type")) //来源单据类型-ERP
+        objCT1129.put("ext_source_order_code", item.getString("ext_source_order_code"))//来源单据编码-ERP
+        objCT1129.put("ext_warehouse_task_type2", item.getString("ext_warehouse_task_type2"))//仓库任务类型
+
+        objCT1129.put("dataSourceType",item.getBmfClassName()) //来源单据类型
+        objCT1129.put("dataSourceIdentifier", item.getInteger("id"))//来源单据编码
         objCT1129.put("ext_warehouse_in_application_code", item.getString("ext_warehouse_In_application_code"))//入库申请单号
         objCT1129.put("ext_target_warehouse_code", item.getString("warehouseCode"))//目标仓库编码
         objCT1129.put("ext_target_warehouse_name", item.getString("warehouseName"))//目标仓库名称

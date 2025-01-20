@@ -18,7 +18,7 @@ import java.util.stream.Collectors
 /**
  * @author 袁英杰
  * @CreateDate 2025-01-15
- * @Dscription CT1129 入库任务-特殊（PDA）提交时，1\创建入库结果单，2\反写入库申请单，3\回传ERP
+ * @Dscription CT1129 入库任务-特殊（PDA）提交时，1\创建入库结果单，2\反写入库申请单，3\回传ERP 4\不创建入库任务单
  * */
 class NodeCT1129Submit extends NodeGroovyClass {
     BasicGroovyService basicGroovyService = SpringUtils.getBean(BasicGroovyService.class)
@@ -37,15 +37,17 @@ class NodeCT1129Submit extends NodeGroovyClass {
         if (!passBoxes) {
             throw new BusinessException("周转箱信息必须填写，请检查后重试！")
         }
-        def sum=passBoxes.sum(it->it.getBigDecimal("receiveQuantity"))?:BigDecimal.ZERO
-        def plannedQty=nodeData.getBigDecimal("ext_quantity")?:BigDecimal.ZERO
-        if(sum!=plannedQty){
+        def sum = passBoxes.sum(it -> it.getBigDecimal("receiveQuantity")) ?: BigDecimal.ZERO
+        def plannedQty = nodeData.getBigDecimal("ext_quantity") ?: BigDecimal.ZERO
+        if (sum != plannedQty) {
             throw new BusinessException("周转箱累计数量必须等于任务数量，请检查后重试！")
         }
         for (final def passBox in passBoxes) {
             //更新同步入库申请单
             updateWarehouseInApplication(passBox, nodeData, warehouseInApplicationCode)
         }
+
+
         return nodeData
     }
 
@@ -55,28 +57,24 @@ class NodeCT1129Submit extends NodeGroovyClass {
     private void updateWarehouseInApplication(BmfObject passBox, BmfObject nodeData, String warehouseInApplicationCode) {
 
         //默认批次编码为：ZD
-        String batchNumber = "ZD"
-        if (!nodeData.get("ext_batch_number")) {
-            batchNumber = "ZD"
-        } else {
-            batchNumber = nodeData.get("ext_batch_number")
-        }
+        String batchNumber =nodeData.get("ext_batch_number")?:"ZD"
 
-        if(nodeData.getString("ext_material_code")!=passBox.getString("materialCode"))
-        {
-           throw new BusinessException("周转箱物料编码与任务单物料编码不一致，请检查后重试！")
+        if (nodeData.getString("ext_material_code") != passBox.getString("materialCode")) {
+            throw new BusinessException("周转箱物料编码与任务单物料编码不一致，请检查后重试！")
         }
 
         //本次填写的数量，而不是周转箱的quantity
         BigDecimal thisQuantity = passBox.getBigDecimal("receiveQuantity")
+
         //匹配入库申请单
         String materialCode = passBox.getString("materialCode")
         def warehouseInApplication1 = basicGroovyService.getByCode("WarehouseInApplication", warehouseInApplicationCode)
 
         // 取第一个“未完成”的 WarehouseInApplication
+
         def warehouseInApplication2 = warehouseInApplication1.stream()
                 .filter { it ->
-                    // 注意这里是 Java Lambda 写法，Groovy 里要么写 “->” 要么写匿名内部类
+                    //  Java Lambda 写法，Groovy 里要么写 “->” 要么写匿名内部类
                     return !(it.getString("status") in ["completed", "closed", "done", "cancel"])
                 }
                 .findFirst()//取第一个
@@ -92,10 +90,10 @@ class NodeCT1129Submit extends NodeGroovyClass {
         List<BmfObject> warehouseInApplicationDetailsFilter = warehouseInApplicationDetailsAll.stream()
                 .filter { detail ->
                     detail.getString("materialCode") == materialCode &&
-                    detail.getBigDecimal("wait_inbound_quantity") > BigDecimal.ZERO
+                            detail.getBigDecimal("wait_inbound_quantity") > BigDecimal.ZERO
                 }
-                .sorted( Comparator .comparingInt({((BmfObject) it).getInteger("lineNum") } )
-                                .thenComparingLong({ ((BmfObject)it).getPrimaryKeyValue() })
+                .sorted(Comparator.comparingInt({ ((BmfObject) it).getInteger("lineNum") })
+                        .thenComparingLong({ ((BmfObject) it).getPrimaryKeyValue() })
                         //((BmfObject) it)的意义为：将it转换为BmfObject类型
                 )
                 .collect(Collectors.toList())
@@ -114,6 +112,7 @@ class NodeCT1129Submit extends NodeGroovyClass {
             }
             //本次数量 > 未收货数量
             if (noWarehousedQuantity < thisQuantity) {
+                //def lineNum = detail.getInteger("lineNum")
 
                 warehousedQuantity = warehousedQuantity + noWarehousedQuantity
                 detail.put("warehoused_quantity", warehousedQuantity)
@@ -121,8 +120,13 @@ class NodeCT1129Submit extends NodeGroovyClass {
 
                 //创建、更新入库结果单据
                 maintenanceWarehouseInResult(passBox, noWarehousedQuantity, warehouseInApplication2, detail, nodeData)
-                thisQuantity = thisQuantity-noWarehousedQuantity
+                thisQuantity = thisQuantity - noWarehousedQuantity
+
+                //塞仓库
+                detail.put("target_warehouse_code", nodeData.getString("warehouseCode"))
+                detail.put("target_warehouse_name", nodeData.getString("warehouseName"))
             } else {
+                //def lineNum = detail.getInteger("lineNum")
                 warehousedQuantity = warehousedQuantity + thisQuantity
                 detail.put("warehoused_quantity", warehousedQuantity)
                 detail.put("wait_inbound_quantity", docLineQuantity - warehousedQuantity)
@@ -130,10 +134,12 @@ class NodeCT1129Submit extends NodeGroovyClass {
                 //创建更新入库结果单据
                 maintenanceWarehouseInResult(passBox, thisQuantity, warehouseInApplication2, detail, nodeData)
                 thisQuantity = BigDecimal.ZERO
+
+                //塞仓库
+                detail.put("target_warehouse_code", nodeData.getString("warehouseCode"))
+                detail.put("target_warehouse_name", nodeData.getString("warehouseName"))
             }
-            //塞仓库
-            detail.put("target_warehouse_code", nodeData.getString("warehouseCode"))
-            detail.put("target_warehouse_name", nodeData.getString("warehouseName"))
+
             //更新入库申请单行的数量
             basicGroovyService.updateByPrimaryKeySelective(detail)
             //同步回sap
@@ -147,7 +153,7 @@ class NodeCT1129Submit extends NodeGroovyClass {
         if (!Arrays.asList("completed", "closed").contains(warehouseInApplication2.getString("status"))) {
             BmfObject warehouseInApplicationUpdateUpdate = new BmfObject(warehouseInApplication2.getBmfClassName())
             warehouseInApplicationUpdateUpdate.put("id", warehouseInApplication2.getPrimaryKeyValue())
-            if (sumWarehousedQty== 0) {
+            if (sumWarehousedQty == 0) {
                 warehouseInApplicationUpdateUpdate.put("status", "completed")
             } else {
                 warehouseInApplicationUpdateUpdate.put("status", "partWarehoused")
@@ -157,8 +163,8 @@ class NodeCT1129Submit extends NodeGroovyClass {
 
         //更新周周转箱位置，取值于界面上的位置
         BmfObject passBoxReal = basicGroovyService.getByCode("passBoxReal", passBox.getString("code"))
-        if (!passBoxReal){
-            throw new  BusinessException("周转箱实时信息不存在")
+        if (!passBoxReal) {
+            throw new BusinessException("周转箱实时信息不存在")
         }
         passBoxReal.put("location", basicGroovyService.getByCode("location", nodeData.getString("targetLocationCode")))
         passBoxReal.put("locationCode", nodeData.getString("targetLocationCode"))
@@ -166,17 +172,16 @@ class NodeCT1129Submit extends NodeGroovyClass {
         sceneGroovyService.synchronizePassBoxInfo(passBoxReal, EquipSourceEnum.PDA.getCode(), nodeData.getBmfClassName())
 
         //更新周转箱实时表的批次编码和产品线
-        passBoxReal.put("ext_batch_number",batchNumber)
+        passBoxReal.put("ext_batch_number", batchNumber)
         passBoxReal.put("ext_prdLine", nodeData.getString("ext_prdLine"))
         basicGroovyService.updateByPrimaryKeySelective(passBoxReal)
-
 
 
     }
 
 /**
  * 入库结果单
- *如果考虑与ERP的每笔业务的过账记录，那么这里永远应该是新增一条记录，而是不追加
+ * 如果考虑与ERP的每笔业务的过账记录，那么这里永远应该是新增一条记录，而是不追加
  */
     private void maintenanceWarehouseInResult(BmfObject passBoxReal, BigDecimal quantity, BmfObject warehouseInApplication, BmfObject warehouseInApplicationDetail, BmfObject nodeData) {
         def warehouseInApplicationCode = warehouseInApplication.getString("code")

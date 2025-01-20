@@ -69,8 +69,15 @@ class NodeGN0001Submit extends NodeGroovyClass {
             BmfObject ct1118 = new BmfObject("CT1118")
 
             //默认批次编码为：ZD
-            String batchNumber="ZD"
-            if  (!item.get("ext_batch_number")){batchNumber="ZD"}else{batchNumber=item.get("ext_batch_number")}
+            String batchNumber=item.get("ext_batch_number")?:"ZD"
+
+
+            ct1118.put("ext_source_order_type",item.getString("ext_source_order_type")) //来源单据类型-ERP
+            ct1118.put("ext_source_order_code", item.getString("ext_source_order_code"))//来源单据编码-ERP
+            ct1118.put("ext_warehouse_task_type2",item.getString("ext_warehouse_task_type2"))//仓管任务类型
+
+            ct1118.put("dataSourceType",item.getBmfClassName()) //来源单据类型-MES
+            ct1118.put("dataSourceIdentifier", item.getInteger("id"))//来源单据编码-MES
             ct1118.put("ext_warehouse_In_application_code", item.getString("ext_warehouse_in_application_code"))//入库申请单编码
             ct1118.put("ext_warehouse_in_type", item.getString("ext_warehouse_in_type"))//入库类型 生产完工；采购入库等
             ct1118.put("ext_material_code", passBox.getString("materialCode"))//物料编码
@@ -78,6 +85,8 @@ class NodeGN0001Submit extends NodeGroovyClass {
             ct1118.put("ext_quantity", passBox.getBigDecimal("quantity"))//入库数量
             ct1118.put("ext_batch_number",batchNumber)//批次编码
             ct1118.put("ext_prdLine", item.getString("ext_prdLine"))//产品线
+
+
 
             //组装移动应用的任务表
             List<BmfObject> tasks = new ArrayList<>()
@@ -126,11 +135,17 @@ class NodeGN0001Submit extends NodeGroovyClass {
             BmfObject ct1110 = new BmfObject("CT1110")
 
             //默认批次编码为：ZD
-            String batchNumber="ZD"
-            if  (!item.get("ext_batch_number")){batchNumber="ZD"}else{batchNumber=item.get("ext_batch_number")}
+            String batchNumber=item.get("ext_batch_number")?:"ZD"
 
             //获得当前物料的对象
             def  thisItem=basicGroovyService.getByCode("material", passBox.getString("materialCode"))
+
+            ct1110.put("ext_source_order_type",item.getString("ext_source_order_type")) //来源单据类型-ERP
+            ct1110.put("ext_source_order_code", item.getString("ext_source_order_code"))//来源单据编码-ERP
+            ct1110.put("ext_warehouse_task_type2",item.getString("ext_warehouse_task_type2"))//仓管任务类型
+
+            ct1110.put("dataSourceType",item.getBmfClassName()) //来源单据类型-MES
+            ct1110.put("dataSourceIdentifier", item.getInteger("id"))//来源单据编码-MES
             ct1110.put("ext_operateSourceEnum","GN0001")//业务类型：采购入库GN0001等
             ct1110.put("ext_warehouse_in_type","purchaseDeliver")//入库类型：采购收货-purchaseDeliver 等 （enum_name=WarehouseInType）
             ct1110.put("ext_warehouse_in_application_code",item.getString("ext_warehouse_in_application_code"))//入库申请单编码
